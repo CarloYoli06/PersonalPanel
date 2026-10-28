@@ -5,7 +5,8 @@ import {
   Loader2,
   ScanLine,
   Settings,
-  Sparkles
+  Sparkles,
+  Wrench
 } from 'lucide-react'
 import type {
   BrandingConfig,
@@ -26,6 +27,7 @@ type ActiveRoute = 'dashboard' | 'settings' | string
 function NavIcon({ icon }: { icon: ModuleManifest['icon'] }): JSX.Element {
   if (icon === 'video') return <Clapperboard className="h-4 w-4" />
   if (icon === 'scan') return <ScanLine className="h-4 w-4" />
+  if (icon === 'wrench') return <Wrench className="h-4 w-4" />
   return <Sparkles className="h-4 w-4" />
 }
 
@@ -171,12 +173,16 @@ function HubShell(): JSX.Element {
       setModuleStates((prev) => {
         const current = prev[moduleId]
         if (!current) return prev
+        const nextStatusText = statusText ?? (running ? 'Procesando…' : 'Listo (0 MB en reposo)')
+        if (current.running === running && current.statusText === nextStatusText) {
+          return prev
+        }
         return {
           ...prev,
           [moduleId]: {
             ...current,
             running,
-            statusText: statusText ?? (running ? 'Procesando…' : 'Listo (0 MB en reposo)')
+            statusText: nextStatusText
           }
         }
       })
@@ -184,14 +190,60 @@ function HubShell(): JSX.Element {
     []
   )
 
+  const handleNavigateHome = useCallback(() => setRoute('dashboard'), [])
+
+  const [moduleOrder, setModuleOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('panel-personal:module-order')
+      if (saved) return JSON.parse(saved) as string[]
+    } catch {
+      /* ignore */
+    }
+    return MODULE_REGISTRY.map((m) => m.id)
+  })
+
+  const orderedModules = useMemo(() => {
+    const map = new Map(MODULE_REGISTRY.map((m) => [m.id, m]))
+    const result: typeof MODULE_REGISTRY[number][] = []
+    for (const id of moduleOrder) {
+      const mod = map.get(id)
+      if (mod) {
+        result.push(mod)
+        map.delete(id)
+      }
+    }
+    for (const mod of map.values()) {
+      result.push(mod)
+    }
+    return result
+  }, [moduleOrder])
+
+  const handleReorderModules = useCallback((nextOrder: string[]) => {
+    setModuleOrder(nextOrder)
+    try {
+      localStorage.setItem('panel-personal:module-order', JSON.stringify(nextOrder))
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
   const enabledModules = useMemo(
-    () => MODULE_REGISTRY.filter((m) => moduleStates[m.id]?.enabled !== false),
-    [moduleStates]
+    () => orderedModules.filter((m) => moduleStates[m.id]?.enabled !== false),
+    [orderedModules, moduleStates]
   )
 
   const activeModule = useMemo(
     () => (route !== 'dashboard' && route !== 'settings' ? getModuleById(route) : undefined),
     [route]
+  )
+
+  const handleActiveModuleStatusChange = useCallback(
+    (running: boolean, text?: string) => {
+      if (activeModule) {
+        handleModuleInlineStatus(activeModule.id, running, text)
+      }
+    },
+    [activeModule, handleModuleInlineStatus]
   )
 
   return (
@@ -248,7 +300,16 @@ function HubShell(): JSX.Element {
               const activeRing =
                 mod.accent === 'cyan'
                   ? 'bg-cyan-500/15 text-[var(--text-primary)] ring-1 ring-cyan-500/35'
-                  : 'bg-violet-500/15 text-[var(--text-primary)] ring-1 ring-violet-500/35'
+                  : mod.accent === 'emerald'
+                    ? 'bg-emerald-500/15 text-[var(--text-primary)] ring-1 ring-emerald-500/35'
+                    : 'bg-violet-500/15 text-[var(--text-primary)] ring-1 ring-violet-500/35'
+
+              const iconColor =
+                mod.accent === 'cyan'
+                  ? 'text-cyan-400'
+                  : mod.accent === 'emerald'
+                    ? 'text-emerald-400'
+                    : 'text-violet-400'
 
               return (
                 <button
@@ -261,7 +322,7 @@ function HubShell(): JSX.Element {
                       : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  <span className={mod.accent === 'cyan' ? 'text-cyan-400' : 'text-violet-400'}>
+                  <span className={iconColor}>
                     <NavIcon icon={mod.icon} />
                   </span>
                   <span>{mod.name.split('·')[0].trim()}</span>
@@ -298,17 +359,18 @@ function HubShell(): JSX.Element {
       <div className="min-h-0 flex-1 p-4">
         {route === 'dashboard' && (
           <DashboardView
-            modules={MODULE_REGISTRY}
+            modules={orderedModules}
             moduleStates={moduleStates}
             onOpenModule={(id) => setRoute(id)}
             onToggleModule={(id, enabled) => void handleToggleModule(id, enabled)}
             onOpenSettings={() => setRoute('settings')}
+            onReorderModules={handleReorderModules}
           />
         )}
 
         {route === 'settings' && (
           <SettingsView
-            modules={MODULE_REGISTRY}
+            modules={orderedModules}
             moduleStates={moduleStates}
             appSettings={appSettings}
             onUpdateBranding={handleUpdateBranding}
@@ -334,10 +396,8 @@ function HubShell(): JSX.Element {
             }
           >
             <activeModule.entryPoint
-              onNavigateHome={() => setRoute('dashboard')}
-              onStatusChange={(running, text) =>
-                handleModuleInlineStatus(activeModule.id, running, text)
-              }
+              onNavigateHome={handleNavigateHome}
+              onStatusChange={handleActiveModuleStatusChange}
             />
           </Suspense>
         )}

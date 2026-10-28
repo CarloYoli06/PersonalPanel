@@ -1,12 +1,20 @@
+import { useState } from 'react'
 import {
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   Clapperboard,
   Cpu,
+  GripVertical,
+  Info,
   Layers,
+  LayoutGrid,
+  List,
   ScanLine,
   Settings,
   ShieldCheck,
   Sparkles,
+  Wrench,
   Zap
 } from 'lucide-react'
 import type { ModuleManifest, ModuleStateSnapshot } from '@panel/core-sdk'
@@ -18,14 +26,17 @@ interface DashboardViewProps {
   onOpenModule: (moduleId: string) => void
   onToggleModule: (moduleId: string, enabled: boolean) => void
   onOpenSettings: () => void
+  onReorderModules?: (nextOrder: string[]) => void
 }
 
 function ModuleIcon({
   icon,
-  accent
+  accent,
+  compact
 }: {
   icon: ModuleManifest['icon']
   accent: ModuleManifest['accent']
+  compact?: boolean
 }): JSX.Element {
   const gradient =
     accent === 'cyan'
@@ -34,13 +45,22 @@ function ModuleIcon({
         ? 'from-emerald-500 to-teal-600 shadow-emerald-500/25'
         : 'from-violet-500 to-fuchsia-500 shadow-violet-500/25'
 
-  const Icon = icon === 'scan' ? ScanLine : icon === 'video' ? Clapperboard : Sparkles
+  const Icon =
+    icon === 'scan'
+      ? ScanLine
+      : icon === 'video'
+        ? Clapperboard
+        : icon === 'wrench'
+          ? Wrench
+          : Sparkles
 
   return (
     <div
-      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-lg`}
+      className={`flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-white shadow-md ${
+        compact ? 'h-10 w-10' : 'h-11 w-11'
+      }`}
     >
-      <Icon className="h-6 w-6" strokeWidth={2.2} />
+      <Icon className={compact ? 'h-5 w-5' : 'h-5 w-5'} strokeWidth={2.2} />
     </div>
   )
 }
@@ -50,45 +70,95 @@ export function DashboardView({
   moduleStates,
   onOpenModule,
   onToggleModule,
-  onOpenSettings
+  onOpenSettings,
+  onReorderModules
 }: DashboardViewProps): JSX.Element {
+  const [compactMode, setCompactMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('panel-personal:dashboard-compact')
+      return saved ? JSON.parse(saved) : true
+    } catch {
+      return true
+    }
+  })
+
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  const toggleCompactMode = (): void => {
+    setCompactMode((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('panel-personal:dashboard-compact', JSON.stringify(next))
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }
+
+  const moveModule = (fromIndex: number, toIndex: number): void => {
+    if (!onReorderModules) return
+    if (toIndex < 0 || toIndex >= modules.length || fromIndex === toIndex) return
+    const currentOrder = modules.map((m) => m.id)
+    const [moved] = currentOrder.splice(fromIndex, 1)
+    currentOrder.splice(toIndex, 0, moved)
+    onReorderModules(currentOrder)
+  }
+
+  const handleDrop = (targetId: string): void => {
+    if (!draggedId || draggedId === targetId || !onReorderModules) {
+      setDraggedId(null)
+      setDragOverId(null)
+      return
+    }
+    const currentOrder = modules.map((m) => m.id)
+    const fromIdx = currentOrder.indexOf(draggedId)
+    const toIdx = currentOrder.indexOf(targetId)
+    if (fromIdx !== -1 && toIdx !== -1) {
+      moveModule(fromIdx, toIdx)
+    }
+    setDraggedId(null)
+    setDragOverId(null)
+  }
+
   const enabledCount = modules.filter((m) => moduleStates[m.id]?.enabled !== false).length
   const runningCount = modules.filter((m) => moduleStates[m.id]?.running).length
 
   return (
-    <div className="flex h-full flex-col gap-5 overflow-y-auto pr-1">
-      {/* Hero Banner estilo PowerToys / Raycast */}
-      <section className="panel relative overflow-hidden p-6">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 right-32 h-56 w-56 rounded-full bg-cyan-500/10 blur-3xl" />
+    <div className="flex h-full flex-col gap-4 overflow-y-auto pr-1">
+      {/* Hero Banner compacto con shrink-0 para evitar recortes visuales */}
+      <section className="panel relative shrink-0 overflow-hidden px-5 py-4">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 right-32 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
 
         <div className="relative flex flex-wrap items-center justify-between gap-4">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-              <Zap className="h-3.5 w-3.5 text-violet-400" />
+          <div className="min-w-[260px] flex-1">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
+              <Zap className="h-3 w-3 text-violet-400" />
               Arquitectura Modular Ultraligera · Lazy Loading & Subprocesos bajo demanda
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            <h1 className="mt-1.5 text-lg font-bold tracking-tight text-[var(--text-primary)] sm:text-xl">
               Panel Principal de Herramientas
             </h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Lanza tus utilidades de escritorio desde un único Hub. Los módulos inactivos no se cargan en memoria RAM y los motores pesados (<code className="rounded bg-[var(--bg-card)] px-1.5 py-0.5 font-mono text-xs text-violet-400">FFmpeg</code>, <code className="rounded bg-[var(--bg-card)] px-1.5 py-0.5 font-mono text-xs text-cyan-400">WIA Scanner</code>) solo se instancian durante la tarea.
+            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+              Lanza tus utilidades desde un único Hub. Los módulos inactivos consumen 0 MB de RAM y puedes reordenarlos a tu gusto.
             </p>
           </div>
 
           {/* Métricas de rendimiento del ecosistema */}
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-center">
-              <p className="text-xl font-bold tabular-nums text-[var(--text-primary)]">
+          <div className="flex shrink-0 items-center gap-2.5">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3.5 py-2 text-center">
+              <p className="text-base font-bold tabular-nums text-[var(--text-primary)]">
                 {enabledCount}/{modules.length}
               </p>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Módulos Activos
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Activos
               </p>
             </div>
-            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3 text-center">
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3.5 py-2 text-center">
               <p
-                className={`text-xl font-bold tabular-nums ${
+                className={`text-base font-bold tabular-nums ${
                   runningCount > 0
                     ? 'text-violet-400'
                     : 'text-emerald-500 dark:text-emerald-400'
@@ -96,34 +166,69 @@ export function DashboardView({
               >
                 {runningCount}
               </p>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Procesos Hijos
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Procesos
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Tarjetas de Módulos */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
+      {/* Sección de Tarjetas de Módulos */}
+      <div className="shrink-0">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-violet-400" />
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-              Módulos Instalados en el Workspace
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+              Módulos en el Workspace
             </h2>
+            <span className="hidden rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-0.5 text-[10px] text-[var(--text-muted)] sm:inline-block">
+              Arrastra las tarjetas para cambiar el orden
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
-          >
-            <Settings className="h-3.5 w-3.5" /> Gestionar módulos y binarios
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleCompactMode}
+              title={
+                compactMode
+                  ? 'Cambiar a vista detallada con descripción completa'
+                  : 'Cambiar a vista compacta optimizada'
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+            >
+              {compactMode ? (
+                <>
+                  <LayoutGrid className="h-3.5 w-3.5 text-violet-400" />
+                  <span>Vista Compacta</span>
+                </>
+              ) : (
+                <>
+                  <List className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Vista Detallada</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+            >
+              <Settings className="h-3.5 w-3.5" /> Gestionar módulos
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {modules.map((mod) => {
+        <div
+          className={
+            compactMode
+              ? 'grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3'
+              : 'grid grid-cols-1 gap-4 lg:grid-cols-2'
+          }
+        >
+          {modules.map((mod, index) => {
             const st = moduleStates[mod.id]
             const enabled = st ? st.enabled : mod.defaultEnabled
             const running = Boolean(st?.running)
@@ -133,77 +238,184 @@ export function DashboardView({
             const accentBorder =
               mod.accent === 'cyan'
                 ? 'hover:border-cyan-500/40'
-                : 'hover:border-violet-500/40'
+                : mod.accent === 'emerald'
+                  ? 'hover:border-emerald-500/40'
+                  : 'hover:border-violet-500/40'
 
             const buttonGradient =
               mod.accent === 'cyan'
                 ? 'from-cyan-500 to-violet-600 shadow-cyan-500/20'
-                : 'from-violet-500 to-fuchsia-500 shadow-violet-500/20'
+                : mod.accent === 'emerald'
+                  ? 'from-emerald-500 to-teal-600 shadow-emerald-500/20'
+                  : 'from-violet-500 to-fuchsia-500 shadow-violet-500/20'
+
+            const isDragging = draggedId === mod.id
+            const isDragOver = dragOverId === mod.id && draggedId !== mod.id
 
             return (
               <article
                 key={mod.id}
-                className={`panel group relative flex flex-col justify-between p-5 transition-all duration-200 ${
-                  enabled ? accentBorder : 'opacity-65'
-                }`}
+                draggable
+                onDragStart={(e) => {
+                  setDraggedId(mod.id)
+                  e.dataTransfer.effectAllowed = 'move'
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                  if (dragOverId !== mod.id) setDragOverId(mod.id)
+                }}
+                onDragLeave={() => {
+                  if (dragOverId === mod.id) setDragOverId(null)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  handleDrop(mod.id)
+                }}
+                onDragEnd={() => {
+                  setDraggedId(null)
+                  setDragOverId(null)
+                }}
+                className={`panel group relative flex flex-col justify-between transition-all duration-200 hover:z-20 ${
+                  compactMode ? 'p-4' : 'p-5'
+                } ${enabled ? accentBorder : 'opacity-65'} ${
+                  isDragging ? 'scale-[0.98] opacity-50' : ''
+                } ${isDragOver ? 'ring-2 ring-violet-500/60' : ''}`}
               >
                 <div>
                   {/* Cabecera de la tarjeta */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3.5">
-                      <ModuleIcon icon={mod.icon} accent={mod.accent} />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      {/* Handle de arrastre */}
+                      <div
+                        className="flex cursor-grab items-center text-[var(--text-muted)] opacity-40 transition group-hover:opacity-100 active:cursor-grabbing"
+                        title="Arrastrar para reordenar"
+                      >
+                        <GripVertical className="h-4 w-4" />
+                      </div>
+
+                      <ModuleIcon icon={mod.icon} accent={mod.accent} compact={compactMode} />
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="truncate text-sm font-semibold text-[var(--text-primary)]">
                             {mod.name}
                           </h3>
-                          <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-muted)]">
+                          <span className="shrink-0 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)] px-1.5 py-0.2 font-mono text-[9px] text-[var(--text-muted)]">
                             v{mod.version}
                           </span>
+
+                          {/* Botón Hover con Popover de Descripción y Binarios */}
+                          <div className="group/info relative inline-flex items-center">
+                            <button
+                              type="button"
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+                              aria-label="Ver detalles del módulo"
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Tooltip / Popover flotante al hacer hover */}
+                            <div className="pointer-events-none invisible absolute -left-28 top-6 z-40 w-64 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3 opacity-0 shadow-2xl backdrop-blur-xl transition-all duration-150 group-hover/info:visible group-hover/info:opacity-100">
+                              <p className="text-[11px] font-semibold text-[var(--text-primary)]">
+                                {mod.name}
+                              </p>
+                              <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                                {mod.description}
+                              </p>
+                              <div className="mt-2.5 border-t border-[var(--border-subtle)] pt-2">
+                                <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                                  Motores & Subprocesos bajo demanda:
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {mod.externalBinaries.map((bin) => (
+                                    <span
+                                      key={bin}
+                                      className="inline-flex items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--text-muted)]"
+                                    >
+                                      <Cpu className="h-2.5 w-2.5" /> {bin}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-xs font-medium text-[var(--text-secondary)]">
+
+                        <p
+                          className="mt-0.5 truncate text-[11px] font-medium text-[var(--text-secondary)]"
+                          title={mod.tagline}
+                        >
                           {mod.tagline}
                         </p>
                       </div>
                     </div>
 
-                    {/* Switch rápido Activar/Desactivar */}
-                    <div
-                      className="flex items-center gap-2"
-                      title={
-                        enabled
-                          ? 'Módulo habilitado (clic para desactivar)'
-                          : 'Módulo desactivado (clic para activar)'
-                      }
-                    >
-                      <Switch
-                        checked={enabled}
-                        accent={mod.accent}
-                        onChange={(next) => onToggleModule(mod.id, next)}
-                      />
+                    {/* Acciones rápidas: Reordenar con clic + Switch Activar/Desactivar */}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <div className="hidden items-center gap-0.5 opacity-0 transition group-hover:flex group-hover:opacity-100">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => moveModule(index, index - 1)}
+                          title="Mover antes"
+                          className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:opacity-25"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === modules.length - 1}
+                          onClick={() => moveModule(index, index + 1)}
+                          title="Mover después"
+                          className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:opacity-25"
+                        >
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      <div
+                        title={
+                          enabled
+                            ? 'Módulo habilitado (clic para desactivar)'
+                            : 'Módulo desactivado (clic para activar)'
+                        }
+                      >
+                        <Switch
+                          checked={enabled}
+                          accent={mod.accent}
+                          onChange={(next) => onToggleModule(mod.id, next)}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Descripción */}
-                  <p className="mt-4 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    {mod.description}
-                  </p>
-
-                  {/* Binarios externos bajo demanda */}
-                  <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                    {mod.externalBinaries.map((bin) => (
-                      <span
-                        key={bin}
-                        className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-muted)]"
-                      >
-                        <Cpu className="h-2.5 w-2.5" /> {bin}
-                      </span>
-                    ))}
-                  </div>
+                  {/* Si está en modo detallado, muestra descripción y binarios inline */}
+                  {!compactMode && (
+                    <>
+                      <p className="mt-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+                        {mod.description}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        {mod.externalBinaries.map((bin) => (
+                          <span
+                            key={bin}
+                            className="inline-flex items-center gap-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-muted)]"
+                          >
+                            <Cpu className="h-2.5 w-2.5" /> {bin}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Pie de la tarjeta: Estado en vivo + Botón Abrir */}
-                <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-4">
+                <div
+                  className={`flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] ${
+                    compactMode ? 'mt-3.5 pt-3' : 'mt-4 pt-3.5'
+                  }`}
+                >
                   <StatusBadge
                     status={!enabled ? 'disabled' : running ? 'running' : 'ready'}
                     label={statusText}
@@ -213,18 +425,18 @@ export function DashboardView({
                     <button
                       type="button"
                       onClick={() => onOpenModule(mod.id)}
-                      className={`inline-flex items-center gap-2 rounded-xl bg-gradient-to-r ${buttonGradient} px-4 py-2 text-xs font-semibold text-white shadow-lg transition hover:brightness-110`}
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r ${buttonGradient} px-3.5 py-1.5 text-xs font-semibold text-white shadow-md transition hover:brightness-110`}
                     >
-                      Abrir herramienta
+                      Abrir
                       <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onToggleModule(mod.id, true)}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
                     >
-                      Habilitar módulo
+                      Habilitar
                     </button>
                   )}
                 </div>
@@ -234,10 +446,10 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* Nota de escalabilidad para futuros módulos */}
-      <section className="panel flex items-center justify-between gap-4 px-5 py-3.5">
+      {/* Nota de escalabilidad con shrink-0 */}
+      <section className="panel mt-auto flex shrink-0 items-center justify-between gap-4 px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
             <ShieldCheck className="h-4 w-4" />
           </div>
           <div>
@@ -245,15 +457,14 @@ export function DashboardView({
               Contrato <code className="font-mono text-violet-400">ModuleManifest</code> activo
             </p>
             <p className="text-[11px] text-[var(--text-muted)]">
-              Al cerrar un módulo para volver a este Hub, su árbol de interfaz y estados en memoria se desmontan por completo.
+              Al cerrar un módulo para volver al Hub, su árbol de interfaz y estados en memoria se desmontan por completo.
             </p>
           </div>
         </div>
-        <span className="hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 font-mono text-[10px] text-[var(--text-muted)] sm:inline">
+        <span className="hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 font-mono text-[10px] text-[var(--text-muted)] sm:inline-block">
           packages/core-sdk
         </span>
       </section>
     </div>
   )
 }
-

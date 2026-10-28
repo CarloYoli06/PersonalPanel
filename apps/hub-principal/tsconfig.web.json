@@ -11,7 +11,9 @@
       "@panel/mod-video": ["modules/mod-video/src/index.ts"],
       "@panel/mod-video/*": ["modules/mod-video/src/*"],
       "@panel/mod-scanner": ["modules/mod-scanner/src/index.ts"],
-      "@panel/mod-scanner/*": ["modules/mod-scanner/src/*"]
+      "@panel/mod-scanner/*": ["modules/mod-scanner/src/*"],
+      "@panel/mod-optimizer": ["modules/mod-optimizer/src/index.ts"],
+      "@panel/mod-optimizer/*": ["modules/mod-optimizer/src/*"]
     }
   },
   "include": [
@@ -19,7 +21,8 @@
     "../../packages/core-sdk/src/**/*",
     "../../packages/ui-kit/src/**/*",
     "../../modules/mod-video/src/**/*",
-    "../../modules/mod-scanner/src/**/*"
+    "../../modules/mod-scanner/src/**/*",
+    "../../modules/mod-optimizer/src/**/*"
   ]
 }
 

@@ -12,7 +12,9 @@
     "../../modules/mod-video/src/backend/**/*",
     "../../modules/mod-video/src/shared/**/*",
     "../../modules/mod-scanner/src/backend/**/*",
-    "../../modules/mod-scanner/src/shared/**/*"
+    "../../modules/mod-scanner/src/shared/**/*",
+    "../../modules/mod-optimizer/src/backend/**/*",
+    "../../modules/mod-optimizer/src/shared/**/*"
   ]
 }
 

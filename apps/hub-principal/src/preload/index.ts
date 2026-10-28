@@ -12,6 +12,7 @@ import {
   type ProgressPayload
 } from '@panel/mod-video/shared/types'
 import { SCANNER_IPC, type ScannerModuleAPI } from '@panel/mod-scanner/shared/types'
+import { OPTIMIZER_IPC, type OptimizerModuleAPI } from '@panel/mod-optimizer/shared/types'
 
 const hubApi: HubAPI = {
   minimizeWindow: () => ipcRenderer.send(HUB_IPC.windowMinimize),
@@ -79,8 +80,23 @@ const scannerApi: ScannerModuleAPI = {
   openPath: (p) => ipcRenderer.invoke(SCANNER_IPC.openPath, p)
 }
 
+const optimizerApi: OptimizerModuleAPI = {
+  getMetrics: () => ipcRenderer.invoke(OPTIMIZER_IPC.getSystemMetrics),
+  getStartupApps: () => ipcRenderer.invoke(OPTIMIZER_IPC.getStartupApps),
+  toggleStartupApp: (appId, location, enable) =>
+    ipcRenderer.invoke(OPTIMIZER_IPC.toggleStartupApp, appId, location, enable),
+  scanCleanableItems: () => ipcRenderer.invoke(OPTIMIZER_IPC.scanCleanableItems),
+  executeCleaning: (categoryIds) => ipcRenderer.invoke(OPTIMIZER_IPC.executeCleaning, categoryIds),
+  getTelemetryStatus: () => ipcRenderer.invoke(OPTIMIZER_IPC.getTelemetryStatus),
+  applyPrivacyTweaks: (options) => ipcRenderer.invoke(OPTIMIZER_IPC.applyPrivacyTweaks, options),
+  getVisualStatus: () => ipcRenderer.invoke(OPTIMIZER_IPC.getVisualStatus),
+  applyVisualTweaks: (options) => ipcRenderer.invoke(OPTIMIZER_IPC.applyVisualTweaks, options),
+  trimMemory: () => ipcRenderer.invoke(OPTIMIZER_IPC.trimMemory)
+}
+
 contextBridge.exposeInMainWorld('panelApi', {
   hub: hubApi,
   video: videoApi,
-  scanner: scannerApi
+  scanner: scannerApi,
+  optimizer: optimizerApi
 })

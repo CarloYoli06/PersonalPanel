@@ -129,6 +129,10 @@ function rebuildTrayMenu(): void {
       click: () => showAndNavigate('mod-scanner')
     },
     {
+      label: 'PC Optimizer · Rendimiento & Privacidad',
+      click: () => showAndNavigate('mod-optimizer')
+    },
+    {
       label: 'Configuración y Personalización',
       click: () => showAndNavigate('settings')
     },

@@ -67,9 +67,13 @@ export class IsolatedProcessTracker {
     args: string[],
     options: SubprocessOptions = {}
   ): Promise<SubprocessResult> {
-    const { windowsHide = true, timeoutMs = 0 } = options
+    const { windowsHide = true, timeoutMs = 30_000 } = options
     return new Promise((resolve, reject) => {
-      const child = spawn(command, args, { windowsHide, detached: false })
+      const child = spawn(command, args, {
+        windowsHide,
+        detached: false,
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
       this.track(child)
 
       let stdout = ''
@@ -79,7 +83,7 @@ export class IsolatedProcessTracker {
       if (timeoutMs > 0) {
         timer = setTimeout(() => {
           try {
-            child.kill('SIGKILL')
+            child.kill()
           } catch {
             /* ignore */
           }

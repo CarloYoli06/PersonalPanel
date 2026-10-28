@@ -63,6 +63,11 @@
         "filter": ["**/*.ps1"]
       },
       {
+        "from": "modules/mod-optimizer/scripts",
+        "to": "scripts",
+        "filter": ["**/*.ps1"]
+      },
+      {
         "from": "apps/hub-principal/build/icon.png",
         "to": "icon.png"
       }

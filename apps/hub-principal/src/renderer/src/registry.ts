@@ -1,6 +1,7 @@
 import type { ModuleManifest } from '@panel/core-sdk'
 import { videoModuleManifest } from '@panel/mod-video'
 import { scannerModuleManifest } from '@panel/mod-scanner'
+import { optimizerModuleManifest } from '@panel/mod-optimizer'
 
 /**
  * Registro central de módulos del Ecosistema.
@@ -12,7 +13,8 @@ import { scannerModuleManifest } from '@panel/mod-scanner'
  */
 export const MODULE_REGISTRY: readonly ModuleManifest[] = [
   videoModuleManifest,
-  scannerModuleManifest
+  scannerModuleManifest,
+  optimizerModuleManifest
 ]
 
 export function getModuleById(id: string): ModuleManifest | undefined {

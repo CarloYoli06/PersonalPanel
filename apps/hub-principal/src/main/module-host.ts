@@ -9,6 +9,7 @@ import {
 } from '@panel/core-sdk'
 import { createVideoBackendController } from '@panel/mod-video/backend'
 import { createScannerBackendController } from '@panel/mod-scanner/backend'
+import { createOptimizerBackendController } from '@panel/mod-optimizer/backend'
 
 interface PersistedHubConfig {
   enabledModules: Record<string, boolean>
@@ -16,7 +17,8 @@ interface PersistedHubConfig {
 
 const DEFAULT_ENABLED: Record<string, boolean> = {
   'mod-video': true,
-  'mod-scanner': true
+  'mod-scanner': true,
+  'mod-optimizer': true
 }
 
 export class ModuleHost {
@@ -56,9 +58,13 @@ export class ModuleHost {
     const scannerController = createScannerBackendController(() =>
       this.broadcastState('mod-scanner')
     )
+    const optimizerController = createOptimizerBackendController(() =>
+      this.broadcastState('mod-optimizer')
+    )
 
     this.controllers.set(videoController.id, videoController)
     this.controllers.set(scannerController.id, scannerController)
+    this.controllers.set(optimizerController.id, optimizerController)
 
     // Solo registramos IPC de los módulos habilitados.
     // Los binarios pesados (FFmpeg / PowerShell) NO se ejecutan aquí.

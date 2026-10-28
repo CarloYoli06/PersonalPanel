@@ -78,6 +78,12 @@ _Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) 
 - **Motor Canvas Integrado:** Recorte manual, detección y auto-recorte de márgenes blancos, rotación 90°, espejo y calibración de brillo/contraste.
 - Exportación directa a **PDF multipágina** (Letter / A4) o imágenes individuales (`.png` / `.jpg`).
 
+### ⚡ 3. PC Optimizer · Rendimiento & Privacidad
+- Limpieza profunda de temporales de usuario, caché Prefetch y descargas residuales de Windows Update.
+- Desactivación de telemetría y recolección de diagnósticos en segundo plano (`DiagTrack`, Advertising ID, Feedback).
+- Aceleración de respuesta visual desactivando animaciones y transparencias pesadas.
+- Detección y administración de programas de inicio automático (claves `Run` de registro) y liberación de RAM.
+
 ---
 
 ## 🏛️ Estructura del Monorepo
@@ -105,7 +111,8 @@ PanelPersonal/
 │
 └── modules/
     ├── mod-video/                  # FileDiet: Backend FFmpeg + Vistas React Lazy
-    └── mod-scanner/                # Escaner Albedo: Scripts WIA + Editor Canvas Lazy
+    ├── mod-scanner/                # Escaner Albedo: Scripts WIA + Editor Canvas Lazy
+    └── mod-optimizer/              # PC Optimizer: Scripts PowerShell + Ajustes de Windows Lazy
 ```
 
 ---

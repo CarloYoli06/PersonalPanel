@@ -21,9 +21,14 @@ function resolveScriptsDir(): string {
   const candidates = [
     path.join(process.resourcesPath ?? '', 'scripts'),
     path.resolve(process.cwd(), 'modules/mod-scanner/scripts'),
+    path.resolve(process.cwd(), '../modules/mod-scanner/scripts'),
     path.resolve(process.cwd(), '../../modules/mod-scanner/scripts'),
+    path.resolve(process.cwd(), '../../../modules/mod-scanner/scripts'),
+    path.resolve(__dirname, 'scripts'),
+    path.resolve(__dirname, '../scripts'),
+    path.resolve(__dirname, '../../scripts'),
     path.resolve(__dirname, '../../../modules/mod-scanner/scripts'),
-    path.resolve(__dirname, '../../scripts')
+    path.resolve(__dirname, '../../../../modules/mod-scanner/scripts')
   ]
   return candidates.find((p) => fs.existsSync(p)) ?? candidates[1]
 }
