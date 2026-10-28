@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "baseUrl": "../.."
+  },
+  "include": [
+    "electron.vite.config.ts",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "../../packages/core-sdk/src/**/*",
+    "../../modules/mod-video/src/backend/**/*",
+    "../../modules/mod-video/src/shared/**/*",
+    "../../modules/mod-scanner/src/backend/**/*",
+    "../../modules/mod-scanner/src/shared/**/*"
+  ]
+}
+

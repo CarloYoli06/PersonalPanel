@@ -1,0 +1,41 @@
+# Dependencias
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Compilados y bundles de Electron-Vite
+out/
+dist/
+**/out/
+**/dist/
+
+# Instaladores y ejecutables empaquetados (Electron-Builder)
+release/
+**/release/
+*.exe
+*.msi
+*.blockmap
+*.AppImage
+*.dmg
+
+# Archivos temporales y logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.tsbuildinfo
+*.tsbuildinfo
+
+# Variables de entorno y configuración local
+.env
+.env.*
+!.env.example
+
+# Sistema Operativo e IDEs
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/

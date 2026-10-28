@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@panel/core-sdk": ["packages/core-sdk/src/index.ts"],
+      "@panel/core-sdk/*": ["packages/core-sdk/src/*"],
+      "@panel/ui-kit": ["packages/ui-kit/src/index.ts"],
+      "@panel/ui-kit/*": ["packages/ui-kit/src/*"],
+      "@panel/mod-video": ["modules/mod-video/src/index.ts"],
+      "@panel/mod-video/*": ["modules/mod-video/src/*"],
+      "@panel/mod-scanner": ["modules/mod-scanner/src/index.ts"],
+      "@panel/mod-scanner/*": ["modules/mod-scanner/src/*"]
+    }
+  }
+}
+

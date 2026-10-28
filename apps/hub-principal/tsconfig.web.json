@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@/*": ["apps/hub-principal/src/renderer/src/*"],
+      "@panel/core-sdk": ["packages/core-sdk/src/index.ts"],
+      "@panel/core-sdk/*": ["packages/core-sdk/src/*"],
+      "@panel/ui-kit": ["packages/ui-kit/src/index.ts"],
+      "@panel/ui-kit/*": ["packages/ui-kit/src/*"],
+      "@panel/mod-video": ["modules/mod-video/src/index.ts"],
+      "@panel/mod-video/*": ["modules/mod-video/src/*"],
+      "@panel/mod-scanner": ["modules/mod-scanner/src/index.ts"],
+      "@panel/mod-scanner/*": ["modules/mod-scanner/src/*"]
+    }
+  },
+  "include": [
+    "src/renderer/src/**/*",
+    "../../packages/core-sdk/src/**/*",
+    "../../packages/ui-kit/src/**/*",
+    "../../modules/mod-video/src/**/*",
+    "../../modules/mod-scanner/src/**/*"
+  ]
+}
+

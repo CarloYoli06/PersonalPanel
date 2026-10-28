@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * Sistema de Temas Global Unificado (Modo Oscuro / Modo Claro / Sistema)
+ * Basado en las paletas originales de FileDiet (Zinc/Violet) y Escaner Albedo (Slate/Cyan).
+ * ══════════════════════════════════════════════════════════════════════════ */
+:root,
+html.theme-dark {
+  --bg-base: #09090b;
+  --bg-surface: rgba(24, 24, 27, 0.55);
+  --bg-elevated: rgba(24, 24, 27, 0.92);
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-card-hover: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --switch-off: #3f3f46;
+  --glow-primary: rgba(139, 92, 246, 0.12);
+  --glow-secondary: rgba(0, 180, 216, 0.08);
+}
+
+html.theme-light {
+  --bg-base: #f8fafc;
+  --bg-surface: rgba(255, 255, 255, 0.85);
+  --bg-elevated: rgba(255, 255, 255, 0.98);
+  --bg-card: rgba(15, 23, 42, 0.035);
+  --bg-card-hover: rgba(15, 23, 42, 0.07);
+  --border-subtle: rgba(15, 23, 42, 0.09);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --switch-off: #cbd5e1;
+  --glow-primary: rgba(139, 92, 246, 0.08);
+  --glow-secondary: rgba(0, 180, 216, 0.07);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family:
+    'Inter',
+    'Segoe UI Variable Text',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.hub-bg {
+  background:
+    radial-gradient(900px 500px at 8% -10%, var(--glow-primary), transparent 60%),
+    radial-gradient(750px 450px at 105% 110%, var(--glow-secondary), transparent 60%),
+    var(--bg-base);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 999px;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-xl transition-colors;
+  }
+  .section-label {
+    @apply mb-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)];
+  }
+  .icon-btn {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:pointer-events-none disabled:opacity-35;
+  }
+}
+

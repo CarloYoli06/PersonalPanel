@@ -1,0 +1,69 @@
+{
+  "name": "@panel/hub",
+  "productName": "Panel Personal Hub",
+  "version": "1.0.0",
+  "description": "Hub modular ultraligero de escritorio (FileDiet + Escaner Albedo)",
+  "author": "Albedo",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "dist": "npm run typecheck && electron-vite build && electron-builder --win --x64"
+  },
+  "dependencies": {
+    "@panel/core-sdk": "*",
+    "@panel/ui-kit": "*",
+    "@panel/mod-video": "*",
+    "@panel/mod-scanner": "*"
+  },
+  "build": {
+    "appId": "com.panelpersonal.hub",
+    "productName": "Panel Personal Hub",
+    "directories": {
+      "output": "../../release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "build/icon.png",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../../modules/mod-scanner/scripts",
+        "to": "scripts",
+        "filter": ["**/*.ps1"]
+      },
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/@ffmpeg-installer/**",
+      "node_modules/@ffprobe-installer/**",
+      "node_modules/ffmpeg-static/**"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Panel Personal Hub"
+    }
+  }
+}
