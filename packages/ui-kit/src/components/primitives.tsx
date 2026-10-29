@@ -12,14 +12,16 @@ export function Switch({
   checked: boolean
   onChange: (next: boolean) => void
   disabled?: boolean
-  accent?: 'violet' | 'cyan' | 'emerald'
+  accent?: 'violet' | 'cyan' | 'emerald' | 'rose'
 }): JSX.Element {
   const activeBg =
     accent === 'cyan'
       ? 'bg-cyan-500'
       : accent === 'emerald'
         ? 'bg-emerald-500'
-        : 'bg-violet-500'
+        : accent === 'rose'
+          ? 'bg-rose-500'
+          : 'bg-violet-500'
 
   return (
     <button

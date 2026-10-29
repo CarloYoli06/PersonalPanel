@@ -7,7 +7,8 @@ module.exports = {
     '../../packages/ui-kit/src/**/*.{ts,tsx}',
     '../../modules/mod-video/src/renderer/**/*.{ts,tsx}',
     '../../modules/mod-scanner/src/renderer/**/*.{ts,tsx}',
-    '../../modules/mod-optimizer/src/renderer/**/*.{ts,tsx}'
+    '../../modules/mod-optimizer/src/renderer/**/*.{ts,tsx}',
+    '../../modules/mod-pdf/src/renderer/**/*.{ts,tsx}'
   ],
   theme: {
     extend: {

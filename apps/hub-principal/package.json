@@ -1,8 +1,8 @@
 {
   "name": "@panel/hub",
   "productName": "Panel Personal Hub",
-  "version": "1.0.0",
-  "description": "Hub modular ultraligero de escritorio (FileDiet + Escaner Albedo)",
+  "version": "1.1.0",
+  "description": "Hub modular ultraligero de escritorio (FileDiet + Escaner Albedo + PC Optimizer + PDF Studio)",
   "author": "Albedo",
   "main": "./out/main/index.js",
   "scripts": {
@@ -18,7 +18,9 @@
     "@panel/core-sdk": "*",
     "@panel/ui-kit": "*",
     "@panel/mod-video": "*",
-    "@panel/mod-scanner": "*"
+    "@panel/mod-scanner": "*",
+    "@panel/mod-optimizer": "*",
+    "@panel/mod-pdf": "*"
   },
   "build": {
     "appId": "com.panelpersonal.hub",

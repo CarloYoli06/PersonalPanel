@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Clapperboard,
+  FileText,
   LayoutGrid,
   Loader2,
   ScanLine,
@@ -28,6 +29,7 @@ function NavIcon({ icon }: { icon: ModuleManifest['icon'] }): JSX.Element {
   if (icon === 'video') return <Clapperboard className="h-4 w-4" />
   if (icon === 'scan') return <ScanLine className="h-4 w-4" />
   if (icon === 'wrench') return <Wrench className="h-4 w-4" />
+  if (icon === 'file-text') return <FileText className="h-4 w-4" />
   return <Sparkles className="h-4 w-4" />
 }
 
@@ -302,14 +304,18 @@ function HubShell(): JSX.Element {
                   ? 'bg-cyan-500/15 text-[var(--text-primary)] ring-1 ring-cyan-500/35'
                   : mod.accent === 'emerald'
                     ? 'bg-emerald-500/15 text-[var(--text-primary)] ring-1 ring-emerald-500/35'
-                    : 'bg-violet-500/15 text-[var(--text-primary)] ring-1 ring-violet-500/35'
+                    : mod.accent === 'rose'
+                      ? 'bg-rose-500/15 text-[var(--text-primary)] ring-1 ring-rose-500/35'
+                      : 'bg-violet-500/15 text-[var(--text-primary)] ring-1 ring-violet-500/35'
 
               const iconColor =
                 mod.accent === 'cyan'
                   ? 'text-cyan-400'
                   : mod.accent === 'emerald'
                     ? 'text-emerald-400'
-                    : 'text-violet-400'
+                    : mod.accent === 'rose'
+                      ? 'text-rose-400'
+                      : 'text-violet-400'
 
               return (
                 <button

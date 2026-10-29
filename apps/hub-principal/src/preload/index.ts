@@ -13,6 +13,7 @@ import {
 } from '@panel/mod-video/shared/types'
 import { SCANNER_IPC, type ScannerModuleAPI } from '@panel/mod-scanner/shared/types'
 import { OPTIMIZER_IPC, type OptimizerModuleAPI } from '@panel/mod-optimizer/shared/types'
+import { PDF_IPC, type PdfModuleAPI } from '@panel/mod-pdf/shared/types'
 
 const hubApi: HubAPI = {
   minimizeWindow: () => ipcRenderer.send(HUB_IPC.windowMinimize),
@@ -94,9 +95,32 @@ const optimizerApi: OptimizerModuleAPI = {
   trimMemory: () => ipcRenderer.invoke(OPTIMIZER_IPC.trimMemory)
 }
 
+const pdfApi: PdfModuleAPI = {
+  getPathForFile: (file) => webUtils.getPathForFile(file),
+  selectPdfFiles: (multiple) => ipcRenderer.invoke(PDF_IPC.selectPdfFiles, multiple),
+  selectImageFiles: () => ipcRenderer.invoke(PDF_IPC.selectImageFiles),
+  selectOutputFolder: (defaultPath) => ipcRenderer.invoke(PDF_IPC.selectOutputFolder, defaultPath),
+  inspectPdfs: (filePaths) => ipcRenderer.invoke(PDF_IPC.inspectPdfs, filePaths),
+  inspectImages: (filePaths) => ipcRenderer.invoke(PDF_IPC.inspectImages, filePaths),
+  readPdfBytes: (filePath) => ipcRenderer.invoke(PDF_IPC.readPdfBytes, filePath),
+  readImageDataUrl: (filePath, maxPreviewPx) =>
+    ipcRenderer.invoke(PDF_IPC.readImageDataUrl, filePath, maxPreviewPx),
+  mergePdfs: (req) => ipcRenderer.invoke(PDF_IPC.mergePdfs, req),
+  splitPdf: (req) => ipcRenderer.invoke(PDF_IPC.splitPdf, req),
+  organizePdf: (req) => ipcRenderer.invoke(PDF_IPC.organizePdf, req),
+  compressPdf: (req) => ipcRenderer.invoke(PDF_IPC.compressPdf, req),
+  imagesToPdf: (req) => ipcRenderer.invoke(PDF_IPC.imagesToPdf, req),
+  saveExportedImages: (req) => ipcRenderer.invoke(PDF_IPC.saveExportedImages, req),
+  stampPdf: (req) => ipcRenderer.invoke(PDF_IPC.stampPdf, req),
+  updateMetadataAndSecurity: (req) => ipcRenderer.invoke(PDF_IPC.updateMetadataAndSecurity, req),
+  revealInFolder: (targetPath) => ipcRenderer.invoke(PDF_IPC.revealInFolder, targetPath),
+  openFile: (targetPath) => ipcRenderer.invoke(PDF_IPC.openFile, targetPath)
+}
+
 contextBridge.exposeInMainWorld('panelApi', {
   hub: hubApi,
   video: videoApi,
   scanner: scannerApi,
-  optimizer: optimizerApi
+  optimizer: optimizerApi,
+  pdf: pdfApi
 })

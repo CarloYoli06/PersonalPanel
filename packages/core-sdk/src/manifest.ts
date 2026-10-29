@@ -42,9 +42,9 @@ export interface ModuleManifest {
   /** Categoría funcional */
   category: ModuleCategory
   /** Identificador de icono (Lucide icon name) */
-  icon: 'video' | 'scan' | 'cpu' | 'sparkles' | 'wrench'
-  /** Color de acento primario para tarjetas e indicadores ('violet' | 'cyan' | 'emerald') */
-  accent: 'violet' | 'cyan' | 'emerald'
+  icon: 'video' | 'scan' | 'cpu' | 'sparkles' | 'wrench' | 'file-text'
+  /** Color de acento primario para tarjetas e indicadores ('violet' | 'cyan' | 'emerald' | 'rose') */
+  accent: 'violet' | 'cyan' | 'emerald' | 'rose'
   /** Estado por defecto al instalar por primera vez */
   defaultEnabled: boolean
   /** Lista descriptiva de binarios o drivers externos que utiliza bajo demanda */

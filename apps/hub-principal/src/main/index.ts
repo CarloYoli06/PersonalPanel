@@ -133,6 +133,10 @@ function rebuildTrayMenu(): void {
       click: () => showAndNavigate('mod-optimizer')
     },
     {
+      label: 'PDF Studio · Control de PDF',
+      click: () => showAndNavigate('mod-pdf')
+    },
+    {
       label: 'Configuración y Personalización',
       click: () => showAndNavigate('settings')
     },

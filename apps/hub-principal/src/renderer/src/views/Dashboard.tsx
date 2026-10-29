@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Clapperboard,
   Cpu,
+  FileText,
   GripVertical,
   Info,
   Layers,
@@ -43,7 +44,9 @@ function ModuleIcon({
       ? 'from-cyan-500 to-violet-600 shadow-cyan-500/25'
       : accent === 'emerald'
         ? 'from-emerald-500 to-teal-600 shadow-emerald-500/25'
-        : 'from-violet-500 to-fuchsia-500 shadow-violet-500/25'
+        : accent === 'rose'
+          ? 'from-rose-500 to-orange-500 shadow-rose-500/25'
+          : 'from-violet-500 to-fuchsia-500 shadow-violet-500/25'
 
   const Icon =
     icon === 'scan'
@@ -52,7 +55,9 @@ function ModuleIcon({
         ? Clapperboard
         : icon === 'wrench'
           ? Wrench
-          : Sparkles
+          : icon === 'file-text'
+            ? FileText
+            : Sparkles
 
   return (
     <div
@@ -240,14 +245,18 @@ export function DashboardView({
                 ? 'hover:border-cyan-500/40'
                 : mod.accent === 'emerald'
                   ? 'hover:border-emerald-500/40'
-                  : 'hover:border-violet-500/40'
+                  : mod.accent === 'rose'
+                    ? 'hover:border-rose-500/40'
+                    : 'hover:border-violet-500/40'
 
             const buttonGradient =
               mod.accent === 'cyan'
                 ? 'from-cyan-500 to-violet-600 shadow-cyan-500/20'
                 : mod.accent === 'emerald'
                   ? 'from-emerald-500 to-teal-600 shadow-emerald-500/20'
-                  : 'from-violet-500 to-fuchsia-500 shadow-violet-500/20'
+                  : mod.accent === 'rose'
+                    ? 'from-rose-500 to-orange-500 shadow-rose-500/20'
+                    : 'from-violet-500 to-fuchsia-500 shadow-violet-500/20'
 
             const isDragging = draggedId === mod.id
             const isDragOver = dragOverId === mod.id && draggedId !== mod.id

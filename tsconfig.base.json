@@ -21,7 +21,9 @@
       "@panel/mod-scanner": ["modules/mod-scanner/src/index.ts"],
       "@panel/mod-scanner/*": ["modules/mod-scanner/src/*"],
       "@panel/mod-optimizer": ["modules/mod-optimizer/src/index.ts"],
-      "@panel/mod-optimizer/*": ["modules/mod-optimizer/src/*"]
+      "@panel/mod-optimizer/*": ["modules/mod-optimizer/src/*"],
+      "@panel/mod-pdf": ["modules/mod-pdf/src/index.ts"],
+      "@panel/mod-pdf/*": ["modules/mod-pdf/src/*"]
     }
   }
 }

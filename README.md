@@ -45,6 +45,13 @@ _Panel central con métricas en vivo, lanzamiento de herramientas y conmutación
 
 <br />
 
+| PC Optimizer (Rendimiento & Privacidad) | PDF Studio (Control de PDF) |
+|:---:|:---:|
+| ![PC Optimizer](./docs/screenshots/module-optimizer.png) | ![PDF Studio](./docs/screenshots/module-pdf.png) |
+| _Limpieza de caché, telemetría y apps de inicio_ | _Unir, dividir, organizar, comprimir y convertir_ |
+
+<br />
+
 ### Configuración, Temas e Icono Dinámico
 _Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) y generador de iniciales._
 
@@ -84,6 +91,13 @@ _Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) 
 - Aceleración de respuesta visual desactivando animaciones y transparencias pesadas.
 - Detección y administración de programas de inicio automático (claves `Run` de registro) y liberación de RAM.
 
+### 📕 4. PDF Studio · Control Integral de Documentos
+- **Unir PDF (Merge):** Fusión ultrarrápida por lotes con reordenamiento interactivo y portada previa.
+- **Dividir y Extraer:** Extracción por rangos personalizados (`1-4, 7`), selección manual en cuadrícula visual o separación completa de cada página.
+- **Organizar y Rotar:** Miniaturas nítidas generadas en memoria (`pdfjs-dist/legacy`), rotación libre en 90° e inserción de nuevos documentos.
+- **Comprimir y Optimizar:** 3 perfiles (Estructural sin pérdida, Balanceado 150 DPI y Máximo 100 DPI) con cálculo comparativo de reducción.
+- **Convertir y Sellar:** Conversión de imágenes (JPG, PNG, WebP) a PDF, extracción de páginas a imágenes, numeración de páginas y marcas de agua.
+
 ---
 
 ## 🏛️ Estructura del Monorepo
@@ -95,6 +109,8 @@ PanelPersonal/
 │   ├── dashboard.png
 │   ├── module-video.png
 │   ├── module-scanner.png
+│   ├── module-optimizer.png
+│   ├── module-pdf.png
 │   └── settings.png
 │
 ├── apps/
@@ -112,19 +128,22 @@ PanelPersonal/
 └── modules/
     ├── mod-video/                  # FileDiet: Backend FFmpeg + Vistas React Lazy
     ├── mod-scanner/                # Escaner Albedo: Scripts WIA + Editor Canvas Lazy
-    └── mod-optimizer/              # PC Optimizer: Scripts PowerShell + Ajustes de Windows Lazy
+    ├── mod-optimizer/              # PC Optimizer: Scripts PowerShell + Ajustes de Windows Lazy
+    └── mod-pdf/                    # PDF Studio: Manipulación pdf-lib + Visor pdfjs-dist Lazy
 ```
 
 ---
 
 ## 📦 Descarga e Instalación
 
-El instalador para Windows x64 se compila con **NSIS**, permitiendo elegir la ruta de instalación y creando accesos directos en el menú de inicio y escritorio:
+Los instaladores compilados para Windows x64 se distribuyen de forma oficial a través de **GitHub Releases** (ya que los binarios `.exe` no se almacenan directamente en el historial de Git por límite de tamaño):
 
-| Tipo | Archivo | Ubicación |
+| Tipo | Archivo | Descarga |
 |:---|:---|:---|
-| **Instalador Oficial** | `Panel Personal Hub Setup 1.0.0.exe` | [`release/`](./release/) |
-| **Versión Portable** | `win-unpacked/Panel Personal Hub.exe` | [`release/win-unpacked/`](./release/win-unpacked/) |
+| **Instalador Oficial** | `Panel Personal Hub Setup 1.1.0.exe` | [⬇️ Descargar desde Releases](https://github.com/CarloYoli06/PersonalPanel/releases) |
+| **Versión Portable** | `win-unpacked.zip` / Carpeta ejecutable | [📦 Ver Releases en GitHub](https://github.com/CarloYoli06/PersonalPanel/releases) |
+
+> 💡 **Nota de instalación**: Para compilar tu propio instalador localmente en tu equipo, ejecuta `npm run dist`. El ejecutable quedará generado dentro de la carpeta local `release/`.
 
 ---
 

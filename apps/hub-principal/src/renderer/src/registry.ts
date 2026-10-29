@@ -2,10 +2,11 @@ import type { ModuleManifest } from '@panel/core-sdk'
 import { videoModuleManifest } from '@panel/mod-video'
 import { scannerModuleManifest } from '@panel/mod-scanner'
 import { optimizerModuleManifest } from '@panel/mod-optimizer'
+import { pdfModuleManifest } from '@panel/mod-pdf'
 
 /**
  * Registro central de módulos del Ecosistema.
- * Para añadir un 3er o 4to módulo en el futuro, basta con crear su paquete en `modules/mod-*`
+ * Para añadir un módulo en el futuro, basta con crear su paquete en `modules/mod-*`
  * siguiendo el contrato `ModuleManifest` e incluirlo en esta lista.
  *
  * IMPORTANTE: Importar los manifiestos NO carga las vistas ni los binarios pesados
@@ -14,7 +15,8 @@ import { optimizerModuleManifest } from '@panel/mod-optimizer'
 export const MODULE_REGISTRY: readonly ModuleManifest[] = [
   videoModuleManifest,
   scannerModuleManifest,
-  optimizerModuleManifest
+  optimizerModuleManifest,
+  pdfModuleManifest
 ]
 
 export function getModuleById(id: string): ModuleManifest | undefined {

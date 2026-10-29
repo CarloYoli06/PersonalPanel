@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "apps/hub-principal/electron.vite.config.ts",
+    "apps/hub-principal/src/**/*",
+    "packages/core-sdk/src/**/*",
+    "packages/ui-kit/src/**/*",
+    "modules/mod-video/src/**/*",
+    "modules/mod-scanner/src/**/*",
+    "modules/mod-optimizer/src/**/*",
+    "modules/mod-pdf/src/**/*"
+  ]
+}
+

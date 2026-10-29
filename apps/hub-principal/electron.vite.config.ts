@@ -9,14 +9,22 @@ const workspaceAliases = {
   '@panel/ui-kit': resolve(rootDir, 'packages/ui-kit/src'),
   '@panel/mod-video': resolve(rootDir, 'modules/mod-video/src'),
   '@panel/mod-scanner': resolve(rootDir, 'modules/mod-scanner/src'),
-  '@panel/mod-optimizer': resolve(rootDir, 'modules/mod-optimizer/src')
+  '@panel/mod-optimizer': resolve(rootDir, 'modules/mod-optimizer/src'),
+  '@panel/mod-pdf': resolve(rootDir, 'modules/mod-pdf/src')
 }
 
 export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@panel/core-sdk', '@panel/ui-kit', '@panel/mod-video', '@panel/mod-scanner', '@panel/mod-optimizer']
+        exclude: [
+          '@panel/core-sdk',
+          '@panel/ui-kit',
+          '@panel/mod-video',
+          '@panel/mod-scanner',
+          '@panel/mod-optimizer',
+          '@panel/mod-pdf'
+        ]
       })
     ],
     resolve: {
@@ -24,6 +32,12 @@ export default defineConfig({
     },
     build: {
       rollupOptions: {
+        external: [
+          'fluent-ffmpeg',
+          'ffmpeg-static',
+          '@ffmpeg-installer/ffmpeg',
+          '@ffprobe-installer/ffprobe'
+        ],
         input: {
           index: resolve(__dirname, 'src/main/index.ts')
         }
@@ -33,7 +47,14 @@ export default defineConfig({
   preload: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@panel/core-sdk', '@panel/ui-kit', '@panel/mod-video', '@panel/mod-scanner', '@panel/mod-optimizer']
+        exclude: [
+          '@panel/core-sdk',
+          '@panel/ui-kit',
+          '@panel/mod-video',
+          '@panel/mod-scanner',
+          '@panel/mod-optimizer',
+          '@panel/mod-pdf'
+        ]
       })
     ],
     resolve: {
@@ -55,7 +76,8 @@ export default defineConfig({
       }
     },
     build: {
-      outDir: 'out/renderer'
+      outDir: 'out/renderer',
+      target: 'esnext'
     },
     plugins: [react()]
   }

@@ -14,7 +14,9 @@
     "../../modules/mod-scanner/src/backend/**/*",
     "../../modules/mod-scanner/src/shared/**/*",
     "../../modules/mod-optimizer/src/backend/**/*",
-    "../../modules/mod-optimizer/src/shared/**/*"
+    "../../modules/mod-optimizer/src/shared/**/*",
+    "../../modules/mod-pdf/src/backend/**/*",
+    "../../modules/mod-pdf/src/shared/**/*"
   ]
 }
 

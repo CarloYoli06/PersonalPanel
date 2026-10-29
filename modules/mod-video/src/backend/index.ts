@@ -39,27 +39,66 @@ let cachedBundle: FfmpegBundle | null = null
 async function loadFfmpegLazy(): Promise<FfmpegBundle> {
   if (cachedBundle) return cachedBundle
 
-  const [ffmpegMod, ffmpegStaticMod, ffmpegInstallerMod, ffprobeInstallerMod] = await Promise.all([
-    import('fluent-ffmpeg'),
-    import('ffmpeg-static'),
-    import('@ffmpeg-installer/ffmpeg'),
-    import('@ffprobe-installer/ffprobe')
-  ])
-
+  const ffmpegMod = await import('fluent-ffmpeg')
   const ffmpeg = (ffmpegMod.default ?? ffmpegMod) as typeof import('fluent-ffmpeg')
-  const ffmpegStaticPath = (ffmpegStaticMod.default ?? ffmpegStaticMod) as unknown as string
-  const installerPath = (ffmpegInstallerMod.default ?? ffmpegInstallerMod).path
-  const ffprobeInstallerPath = (ffprobeInstallerMod.default ?? ffprobeInstallerMod).path
+
+  let ffmpegStaticPath = ''
+  let installerPath = ''
+  let ffprobeInstallerPath = ''
+
+  try {
+    const mod = await import('ffmpeg-static')
+    ffmpegStaticPath = (mod.default ?? mod) as unknown as string
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const mod = await import('@ffmpeg-installer/ffmpeg')
+    installerPath = (mod.default ?? mod).path
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const mod = await import('@ffprobe-installer/ffprobe')
+    ffprobeInstallerPath = (mod.default ?? mod).path
+  } catch {
+    /* ignore */
+  }
 
   const appDataBinDir = path.join(app.getPath('userData'), 'binaries', 'ffmpeg')
   const appDataFfmpeg = path.join(appDataBinDir, 'ffmpeg.exe')
   const appDataFfprobe = path.join(appDataBinDir, 'ffprobe.exe')
+  const resUnpacked = path.join(process.resourcesPath ?? '', 'app.asar.unpacked', 'node_modules')
 
-  const ffmpegCandidates = [appDataFfmpeg, ffmpegStaticPath, installerPath]
+  const ffmpegCandidates = [
+    appDataFfmpeg,
+    path.join(resUnpacked, 'ffmpeg-static', 'ffmpeg.exe'),
+    path.join(resUnpacked, '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe'),
+    path.resolve(process.cwd(), 'node_modules/ffmpeg-static/ffmpeg.exe'),
+    path.resolve(process.cwd(), '../../node_modules/ffmpeg-static/ffmpeg.exe'),
+    path.resolve(process.cwd(), 'node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe'),
+    path.resolve(process.cwd(), '../../node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe'),
+    path.resolve(__dirname, '../../../node_modules/ffmpeg-static/ffmpeg.exe'),
+    path.resolve(__dirname, '../../../../node_modules/ffmpeg-static/ffmpeg.exe'),
+    path.resolve(__dirname, '../../../node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe'),
+    path.resolve(__dirname, '../../../../node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe'),
+    ffmpegStaticPath,
+    installerPath
+  ]
     .filter((p): p is string => typeof p === 'string' && p.length > 0)
     .map(toUnpacked)
 
-  const ffprobeCandidates = [appDataFfprobe, ffprobeInstallerPath]
+  const ffprobeCandidates = [
+    appDataFfprobe,
+    path.join(resUnpacked, '@ffprobe-installer', 'win32-x64', 'ffprobe.exe'),
+    path.resolve(process.cwd(), 'node_modules/@ffprobe-installer/win32-x64/ffprobe.exe'),
+    path.resolve(process.cwd(), '../../node_modules/@ffprobe-installer/win32-x64/ffprobe.exe'),
+    path.resolve(__dirname, '../../../node_modules/@ffprobe-installer/win32-x64/ffprobe.exe'),
+    path.resolve(__dirname, '../../../../node_modules/@ffprobe-installer/win32-x64/ffprobe.exe'),
+    ffprobeInstallerPath
+  ]
     .filter((p): p is string => typeof p === 'string' && p.length > 0)
     .map(toUnpacked)
 
