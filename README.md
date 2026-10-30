@@ -5,9 +5,10 @@
   # Panel Personal · Hub Modular de Escritorio
 
   **Ecosistema de utilidades de alto rendimiento para Windows estilo PowerToys & Raycast.**  
-  Construido con una arquitectura de **Monorepo Workspaces**, **Lazy Loading integral** y **aislamiento de subprocesos bajo demanda**.
+  Construido con una moderna arquitectura híbrida de **Tauri v2**, **Rust Cargo Workspaces**, **Monorepo npm**, **Lazy Loading integral** y **subprocesos nativos bajo demanda**.
 
-  [![Electron](https://img.shields.io/badge/Electron-33.2-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
+  [![Tauri](https://img.shields.io/badge/Tauri-2.2-24C8D8?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app/)
+  [![Rust](https://img.shields.io/badge/Rust-1.99-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
   [![React](https://img.shields.io/badge/React-18.3-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
@@ -24,6 +25,17 @@
   </p>
 
 </div>
+
+---
+
+## 🚀 Novedades de la Versión 2.0 (Reescritura en Tauri v2 & Rust)
+
+- **Reducción de tamaño del 95%:** El instalador pasó de **~130 MB** (Electron) a solo **~6.1 MB** (Tauri v2 + NSIS).
+- **Consumo mínimo de memoria:** De consumir más de 150 MB en reposo a escasos **~30 MB de RAM**.
+- **Ventana Frameless Personalizada:** Interfaz sin bordes nativos toscos, con botones propios de control (minimizar, maximizar/restaurar, cerrar con realce en rojo) y región de arrastre suave (`data-tauri-drag-region`).
+- **Arrastre nativo de archivos desde Windows Explorer:** Soporte OLE nativo en **FileDiet** y **PDF Studio** con detección inmediata de rutas en disco y resaltado visual reactivo.
+- **Reordenamiento interactivo en el Dashboard:** Arrastre táctil y por ratón mediante *Pointer Events* con indicador *"Soltar aquí para reordenar"* y botones directos de desplazamiento `[ < ]` y `[ > ]`.
+- **Cero dependencias de Node.js en tiempo de ejecución:** Todo el backend corre directamente como código máquina en binarios nativos de Rust.
 
 ---
 
@@ -52,8 +64,8 @@ _Panel central con métricas en vivo, lanzamiento de herramientas y conmutación
 
 <br />
 
-### Configuración, Temas e Icono Dinámico
-_Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) y generador de iniciales._
+### Configuración, Temas e Identidad Visual
+_Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) y generador de iniciales con logo predeterminado._
 
 ![Ajustes y Personalización](./docs/screenshots/settings.png)
 
@@ -64,10 +76,10 @@ _Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) 
 ## ⚡ Características Principales
 
 - **Cero Consumo de RAM en Reposo:** Mediante Dynamic Imports (`React.lazy`), los módulos y sus motores de renderizado o edición no consumen recursos hasta que el usuario los abre. Al volver al Hub, la memoria se libera inmediatamente.
-- **Aislamiento de Tareas Pesadas:** Motores como **FFmpeg** y los scripts de drivers **Windows WIA / PowerShell STA** corren en procesos hijos (`child_process`) efímeros que mueren inmediatamente al finalizar o cancelar la operación.
+- **Aislamiento de Tareas Pesadas en Rust:** Motores como **FFmpeg** y los scripts de drivers **Windows WIA / PowerShell STA** son orquestados por crates nativos de Rust de manera asíncrona sin bloquear la interfaz.
 - **Bandeja del Sistema (System Tray):** Opción de mantener la suite en segundo plano junto al reloj de Windows (como NVIDIA o Seguridad de Windows). Un clic restaura la aplicación y el clic derecho ofrece acceso rápido a cada herramienta.
-- **Identidad e Iconografía Personalizable:** Permite al usuario alternar entre el **Logo Albedo** oficial o generar dinámicamente un icono con sus **Iniciales (1 o 2 letras) y color personalizado**, actualizándose en tiempo real en la ventana y la bandeja.
-- **Sistema de Temas Unificado:** Soporte completo para **Modo Oscuro**, **Modo Claro** y **Automático (Sistema)** con sincronización nativa del `titleBarOverlay` de Windows.
+- **Identidad e Iconografía Personalizable:** Permite al usuario alternar entre el **Logo Albedo** oficial (embebido de fábrica en el binario) o generar dinámicamente un icono con sus **Iniciales (1 o 2 letras) y color personalizado**, actualizándose en tiempo real en la ventana y la bandeja.
+- **Sistema de Temas Unificado:** Soporte completo para **Modo Oscuro**, **Modo Claro** y **Automático (Sistema)** con sincronización nativa en tiempo real.
 
 ---
 
@@ -75,6 +87,7 @@ _Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) 
 
 ### 🎬 1. FileDiet · Control de Videos
 - Compresión inteligente por lotes para formatos `.mp4`, `.mkv`, `.mov` y `.avi`.
+- Detección de arrastre y suelta nativo desde el Explorador de archivos de Windows.
 - Aceleración por hardware dedicada con **NVIDIA NVENC (`h264_nvenc`)** con fallback automático a **CPU (`libx264`)**.
 - Perfiles de calidad (`Calidad Alta`, `Balanceado -75%`, `Máxima Reducción`) y escalado automático inteligente a 1080p.
 - Cola de procesamiento secuencial para no sobrecargar CPU/GPU.
@@ -92,6 +105,7 @@ _Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) 
 - Detección y administración de programas de inicio automático (claves `Run` de registro) y liberación de RAM.
 
 ### 📕 4. PDF Studio · Control Integral de Documentos
+- Arrastre y suelta nativo reactivo desde Windows Explorer con resaltado visual luminoso.
 - **Unir PDF (Merge):** Fusión ultrarrápida por lotes con reordenamiento interactivo y portada previa.
 - **Dividir y Extraer:** Extracción por rangos personalizados (`1-4, 7`), selección manual en cuadrícula visual o separación completa de cada página.
 - **Organizar y Rotar:** Miniaturas nítidas generadas en memoria (`pdfjs-dist/legacy`), rotación libre en 90° e inserción de nuevos documentos.
@@ -104,72 +118,68 @@ _Gestor de segundo plano (System Tray), selector de tema (Oscuro/Claro/Sistema) 
 
 ```text
 PanelPersonal/
-├── LogoAlbedo.png                  # Imagen maestra de identidad de la suite
-├── docs/screenshots/               # Capturas de pantalla para documentación
-│   ├── dashboard.png
-│   ├── module-video.png
-│   ├── module-scanner.png
-│   ├── module-optimizer.png
-│   ├── module-pdf.png
-│   └── settings.png
+├── Cargo.toml                       # Cargo Workspace raíz (orquestador Rust)
+├── package.json                     # Monorepo npm Workspaces
+├── LogoAlbedo.png                   # Identidad maestra oficial de la suite
+├── release/                         # Instaladores NSIS generados para distribución
+│   └── Panel Personal Hub Setup 2.0.0.exe
 │
 ├── apps/
-│   └── hub-principal/              # Shell / Contenedor principal Electron (@panel/hub)
-│       ├── build/                  # Iconos nativos (.ico multirresolución y .png)
+│   └── hub-principal/               # Aplicación Host principal (@panel/hub)
+│       ├── src-tauri/               # Host nativo Tauri v2 + Rust
+│       │   ├── Cargo.toml
+│       │   ├── tauri.conf.json      # Configuración de ventana, NSIS e iconos
+│       │   ├── icons/               # Iconos multirresolución (.ico, .png)
+│       │   └── src/lib.rs           # Comandos IPC, System Tray y gestión de ventana
 │       └── src/
-│           ├── main/               # Ventana, Bandeja del Sistema y ModuleHost
-│           ├── preload/            # ContextBridge seguro y tipado
-│           └── renderer/           # Dashboard, Settings y navegación por pestañas
+│           └── renderer/            # Dashboard, Settings y navegación (React + Vite)
 │
 ├── packages/
-│   ├── core-sdk/                   # Contrato ModuleManifest, IPC y ProcessTracker
-│   └── ui-kit/                     # Tokens semánticos, ThemeProvider y componentes
+│   ├── core-sdk/                    # Contratos de tipos, IPC Bridge y manifiestos
+│   └── ui-kit/                      # Tokens de diseño, ThemeProvider y controles
 │
-└── modules/
-    ├── mod-video/                  # FileDiet: Backend FFmpeg + Vistas React Lazy
-    ├── mod-scanner/                # Escaner Albedo: Scripts WIA + Editor Canvas Lazy
-    ├── mod-optimizer/              # PC Optimizer: Scripts PowerShell + Ajustes de Windows Lazy
-    └── mod-pdf/                    # PDF Studio: Manipulación pdf-lib + Visor pdfjs-dist Lazy
+└── modules/                         # Módulos híbridos (Rust Crates + React UI)
+    ├── mod-video/                   # FileDiet: Crate nativo mod_video + UI React
+    ├── mod-scanner/                 # Escaner Albedo: Crate nativo mod_scanner + UI Canvas
+    ├── mod-optimizer/               # PC Optimizer: Crate nativo mod_optimizer + UI React
+    └── mod-pdf/                     # PDF Studio: Crate nativo mod_pdf + UI pdf-lib/pdfjs
 ```
 
 ---
 
 ## 📦 Descarga e Instalación
 
-Los instaladores compilados para Windows x64 se distribuyen de forma oficial a través de **GitHub Releases** (ya que los binarios `.exe` no se almacenan directamente en el historial de Git por límite de tamaño):
+Los instaladores compilados para Windows x64 se distribuyen de forma oficial a través de **GitHub Releases**:
 
-| Tipo | Archivo | Descarga |
-|:---|:---|:---|
-| **Instalador Oficial** | `Panel Personal Hub Setup 1.1.0.exe` | [⬇️ Descargar desde Releases](https://github.com/CarloYoli06/PersonalPanel/releases) |
-| **Versión Portable** | `win-unpacked.zip` / Carpeta ejecutable | [📦 Ver Releases en GitHub](https://github.com/CarloYoli06/PersonalPanel/releases) |
+| Tipo | Archivo | Tamaño | Descarga |
+|:---|:---|:---|:---|
+| **Instalador Oficial NSIS** | `Panel Personal Hub Setup 2.0.0.exe` | **~6.1 MB** | [⬇️ Descargar desde Releases](https://github.com/CarloYoli06/PersonalPanel/releases) |
 
-> 💡 **Nota de instalación**: Para compilar tu propio instalador localmente en tu equipo, ejecuta `npm run dist`. El ejecutable quedará generado dentro de la carpeta local `release/`.
+> 💡 **Nota**: Para compilar tu propio instalador localmente en tu equipo, ejecuta `npm run dist`. El ejecutable quedará generado dentro de la carpeta local `release/`.
 
 ---
 
 ## 🛠️ Desarrollo Local
 
 ### Requisitos
-- **Node.js** `>= 18.0.0` (Probado en `v22.14.0`)
+- **Node.js** `>= 18.0.0`
 - **npm** `>= 9.0.0`
+- **Rust & Cargo** `>= 1.80.0` (Toolchain `stable-x86_64-pc-windows-msvc`)
 - **Windows 10 / 11 (x64)**
 
 ### Comandos de Ejecución
 
 ```bash
-# 1. Instalar dependencias en todo el monorepo
+# 1. Instalar dependencias del monorepo
 npm install
 
-# 2. Iniciar en entorno de desarrollo con Hot-Reload
+# 2. Iniciar en entorno de desarrollo con Hot-Reload (Vite + Tauri Dev)
 npm run dev
 
-# 3. Comprobación estricta de tipos de TypeScript (Node & Web)
+# 3. Comprobación estricta de tipos de TypeScript
 npm run typecheck
 
-# 4. Compilar bundles optimizados para producción
-npm run build
-
-# 5. Generar el instalador ejecutable de Windows (.exe)
+# 4. Compilar la aplicación y generar el instalador de producción (.exe)
 npm run dist
 ```
 
@@ -179,13 +189,14 @@ npm run dist
 
 La arquitectura está diseñada para escalar de forma inmediata:
 
-1. Crea una carpeta en `modules/mod-tu-herramienta/` con su propio `package.json`.
-2. Implementa el contrato `ModuleManifest` de `@panel/core-sdk` exportando tu vista con `React.lazy(() => import('./renderer/TuVista'))`.
-3. Registra el manifiesto en `apps/hub-principal/src/renderer/src/registry.ts`.
-4. El módulo aparecerá automáticamente en el Hub con Lazy Loading, soporte de temas y control de encendido/apagado.
+1. Crea una carpeta en `modules/mod-tu-herramienta/` con su `package.json` y su crate de Rust en `src-rust/`.
+2. Añade el nuevo crate al `Cargo.toml` raíz del workspace.
+3. Implementa el contrato `ModuleManifest` de `@panel/core-sdk` exportando tu vista con `React.lazy(() => import('./renderer/TuVista'))`.
+4. Registra el manifiesto en `apps/hub-principal/src/renderer/src/registry.ts`.
+5. El módulo aparecerá automáticamente en el Hub con Lazy Loading, soporte de temas, reordenamiento interactivo y control de encendido/apagado.
 
 ---
 
 <div align="center">
-  <sub>Desarrollado con dedicación bajo arquitectura modular para Windows. MIT License.</sub>
+  <sub>Desarrollado con dedicación bajo arquitectura modular ultraligera en Tauri v2 para Windows. MIT License.</sub>
 </div>

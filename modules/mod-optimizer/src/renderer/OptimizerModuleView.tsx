@@ -13,7 +13,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import type { ModuleViewProps } from '@panel/core-sdk'
-import { PanelCard, Switch, GlobalToast } from '@panel/ui-kit'
+import { PanelCard, Switch, GlobalToast, useI18n } from '@panel/ui-kit'
 import type {
   CleanableCategory,
   PrivacyTweaksOptions,
@@ -34,6 +34,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+  const { t } = useI18n()
   const api = useMemo(() => getOptimizerApi(), [])
   const onStatusChangeRef = useRef(onStatusChange)
   onStatusChangeRef.current = onStatusChange
@@ -224,9 +225,9 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-[var(--text-primary)]">PC Optimizer Hub</h2>
+            <h2 className="text-sm font-bold text-[var(--text-primary)]">{t.optimizer.title}</h2>
             <p className="text-xs text-[var(--text-muted)]">
-              Limpieza, privacidad, telemetría y aceleración de Windows bajo demanda
+              {t.optimizer.subtitle}
             </p>
           </div>
         </div>
@@ -234,7 +235,7 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
         <div className="flex items-center gap-3">
           {!isElectronOptimizer && (
             <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-500">
-              Modo Simulación
+              {t.optimizer.simulationMode}
             </span>
           )}
 
@@ -250,7 +251,7 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
               </span>
               <span className="flex items-center gap-1.5 text-[var(--text-secondary)]">
                 <HardDrive className="h-4 w-4 text-cyan-400" />
-                C: <strong className="text-[var(--text-primary)]">{metrics.systemDriveFreeGb} GB libres</strong>
+                C: <strong className="text-[var(--text-primary)]">{metrics.systemDriveFreeGb} {t.optimizer.freeDisk}</strong>
               </span>
             </div>
           )}
@@ -260,9 +261,9 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
             disabled={loading}
             onClick={() => void handleTrimMemory()}
             className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-40"
-            title="Libera búferes en segundo plano"
+            title={t.optimizer.trimRam}
           >
-            <Zap className="h-3.5 w-3.5" /> Liberar RAM
+            <Zap className="h-3.5 w-3.5" /> {t.optimizer.trimRam}
           </button>
         </div>
       </div>
@@ -270,10 +271,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
       {/* Tabs Selector */}
       <div className="flex gap-2 border-b border-[var(--border-subtle)] pb-2">
         {[
-          { id: 'clean', label: 'Limpieza de Caché', icon: Trash2 },
-          { id: 'privacy', label: 'Privacidad & Telemetría', icon: Shield },
-          { id: 'performance', label: 'Rendimiento Visual', icon: Gauge },
-          { id: 'startup', label: 'Apps de Arranque', icon: Power }
+          { id: 'clean', label: t.optimizer.tabs.clean, icon: Trash2 },
+          { id: 'privacy', label: t.optimizer.tabs.privacy, icon: Shield },
+          { id: 'performance', label: t.optimizer.tabs.performance, icon: Gauge },
+          { id: 'startup', label: t.optimizer.tabs.startup, icon: Power }
         ].map((tab) => {
           const Icon = tab.icon
           const active = activeTab === tab.id
@@ -303,10 +304,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                    Archivos Residuales y Caché del Sistema
+                    {t.optimizer.cleanTitle}
                   </h3>
                   <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                    Elimina archivos temporales acumulados sin afectar tus documentos ni configuraciones.
+                    {t.optimizer.cleanSubtitle}
                   </p>
                 </div>
                 <button
@@ -314,7 +315,7 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
                   disabled={loading}
                   onClick={() => void refreshCleaningScan()}
                   className="icon-btn"
-                  title="Volver a escanear"
+                  title={t.optimizer.rescan}
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
@@ -324,11 +325,14 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
                 {cleanItems.length === 0 && loading ? (
                   <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-subtle)] p-6 text-xs text-[var(--text-muted)]">
                     <RefreshCw className="h-4 w-4 animate-spin text-emerald-400" />
-                    Calculando espacio recuperable en carpetas temporales...
+                    {t.optimizer.calculatingSpace}
                   </div>
                 ) : (
                   cleanItems.map((item) => {
                     const isChecked = selectedCleanIds.includes(item.id)
+                    const catInfo = t.optimizer.categories[item.id as keyof typeof t.optimizer.categories]
+                    const itemName = catInfo?.name || item.name
+                    const itemDesc = catInfo?.desc || item.description
                     return (
                       <div
                         key={item.id}
@@ -337,8 +341,8 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
                         <div className="flex items-center gap-3">
                           <Trash2 className="h-4 w-4 text-[var(--text-muted)]" />
                           <div>
-                            <p className="text-xs font-medium text-[var(--text-primary)]">{item.name}</p>
-                            <p className="text-[11px] text-[var(--text-muted)]">{item.description}</p>
+                            <p className="text-xs font-medium text-[var(--text-primary)]">{itemName}</p>
+                            <p className="text-[11px] text-[var(--text-muted)]">{itemDesc}</p>
                           </div>
                         </div>
 
@@ -364,14 +368,14 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
 
             <PanelCard className="flex flex-col justify-between p-5">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Resumen de Espacio</h3>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.optimizer.summaryTitle}</h3>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Espacio recuperable estimado en el disco principal.
+                  {t.optimizer.summarySubtitle}
                 </p>
 
                 <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 text-center">
                   <p className="text-3xl font-extrabold text-emerald-400">{formatBytes(totalCleanBytes)}</p>
-                  <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">Espacio seleccionado</p>
+                  <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">{t.optimizer.selectedSpace}</p>
                 </div>
               </div>
 
@@ -381,7 +385,7 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
                 onClick={() => void handleExecuteClean()}
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 hover:brightness-110 disabled:opacity-40"
               >
-                <Trash2 className="h-4 w-4" /> Ejecutar Limpieza Ahora
+                <Trash2 className="h-4 w-4" /> {t.optimizer.cleanNow}
               </button>
             </PanelCard>
           </div>
@@ -392,10 +396,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
           <PanelCard className="space-y-4 p-5">
             <div>
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                Protección de Privacidad y Telemetría de Windows
+                {t.optimizer.privacyTitle}
               </h3>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                Deshabilita servicios de rastreo y recolección de diagnósticos en segundo plano.
+                {t.optimizer.privacySubtitle}
               </p>
             </div>
 
@@ -403,10 +407,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
               <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                 <div>
                   <p className="text-xs font-medium text-[var(--text-primary)]">
-                    Desactivar DiagTrack (Connected User Experiences and Telemetry)
+                    {t.optimizer.diagTrackTitle}
                   </p>
                   <p className="text-[11px] text-[var(--text-muted)]">
-                    Detiene el envío periódico de registros de telemetría a los servidores de Microsoft.
+                    {t.optimizer.diagTrackDesc}
                   </p>
                 </div>
                 <Switch
@@ -419,10 +423,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
               <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                 <div>
                   <p className="text-xs font-medium text-[var(--text-primary)]">
-                    Desactivar Identificador de Publicidad (Advertising ID)
+                    {t.optimizer.advertisingIdTitle}
                   </p>
                   <p className="text-[11px] text-[var(--text-muted)]">
-                    Evita que las aplicaciones creen un perfil publicitario basado en tus actividades.
+                    {t.optimizer.advertisingIdDesc}
                   </p>
                 </div>
                 <Switch
@@ -435,10 +439,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
               <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                 <div>
                   <p className="text-xs font-medium text-[var(--text-primary)]">
-                    Desactivar Solicitudes de Comentarios (Feedback Frequency)
+                    {t.optimizer.feedbackTitle}
                   </p>
                   <p className="text-[11px] text-[var(--text-muted)]">
-                    Evita que Windows muestre ventanas emergentes preguntando por tu experiencia.
+                    {t.optimizer.feedbackDesc}
                   </p>
                 </div>
                 <Switch
@@ -456,10 +460,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
           <PanelCard className="space-y-4 p-5">
             <div>
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                Aceleración de Interfaz y Fluidez Visual
+                {t.optimizer.visualTitle}
               </h3>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                Minimiza el lag eliminando animaciones pesadas y efectos de composición innecesarios.
+                {t.optimizer.visualSubtitle}
               </p>
             </div>
 
@@ -467,10 +471,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
               <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                 <div>
                   <p className="text-xs font-medium text-[var(--text-primary)]">
-                    Desactivar Animaciones de Ventanas (Minimizar / Maximizar)
+                    {t.optimizer.windowAnimationsTitle}
                   </p>
                   <p className="text-[11px] text-[var(--text-muted)]">
-                    Apertura y cierre instantáneo de aplicaciones sin transición lenta.
+                    {t.optimizer.windowAnimationsDesc}
                   </p>
                 </div>
                 <Switch
@@ -483,10 +487,10 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
               <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                 <div>
                   <p className="text-xs font-medium text-[var(--text-primary)]">
-                    Desactivar Transparencias de Windows
+                    {t.optimizer.transparencyTitle}
                   </p>
                   <p className="text-[11px] text-[var(--text-muted)]">
-                    Reduce la carga de la GPU al no tener que calcular el desenfoque de fondo.
+                    {t.optimizer.transparencyDesc}
                   </p>
                 </div>
                 <Switch
@@ -505,17 +509,17 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Programas de Inicio Automático
+                  {t.optimizer.startupTitle}
                 </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                  Deshabilita programas que se ejecutan automáticamente al encender el PC.
+                  {t.optimizer.startupSubtitle}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => void refreshStartup()}
                 className="icon-btn"
-                title="Actualizar lista"
+                title={t.optimizer.refreshList}
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
@@ -524,7 +528,7 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
             <div className="mt-4 space-y-2.5">
               {startupApps.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[var(--border-subtle)] p-6 text-center text-xs text-[var(--text-muted)]">
-                  No se encontraron aplicaciones de inicio adicionales en el registro.
+                  {t.optimizer.noStartupApps}
                 </div>
               ) : (
                 startupApps.map((app) => (

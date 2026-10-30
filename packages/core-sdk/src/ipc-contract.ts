@@ -61,6 +61,7 @@ export interface HubAPI {
   minimizeWindow(): void
   maximizeWindow(): void
   closeWindow(): void
+  isWindowMaximized?(): Promise<boolean>
   setNativeTheme(resolvedTheme: 'dark' | 'light'): void
 
   // Identidad visual (Logo vs Iniciales) y Bandeja de Sistema (Segundo plano)

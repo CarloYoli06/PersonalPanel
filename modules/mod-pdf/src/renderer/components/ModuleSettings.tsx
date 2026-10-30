@@ -1,5 +1,5 @@
 import { FolderOpen, HardDrive, Image as ImageIcon, RotateCcw } from 'lucide-react'
-import { PanelCard, Switch } from '@panel/ui-kit'
+import { PanelCard, Switch, useI18n } from '@panel/ui-kit'
 import type { OutputSaveMode, PdfStudioSettings, ThumbnailQuality } from '../../shared/types'
 import { DEFAULT_PDF_SETTINGS } from '../lib/pdfApi'
 
@@ -16,6 +16,9 @@ export function ModuleSettings({
   onBrowseCustomFolder,
   onResetDefaults
 }: ModuleSettingsProps): JSX.Element {
+  const { t } = useI18n()
+  const s = t.pdf.settingsView
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* 1. Motor de Miniaturas Reales y Rendimiento */}
@@ -26,10 +29,10 @@ export function ModuleSettings({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              Motor de Miniaturas Reales (Rendimiento)
+              {s.thumbnailsTitle}
             </h3>
             <p className="text-xs text-[var(--text-muted)]">
-              Controla cómo se previsualizan las páginas mediante pdfjs-dist en memoria.
+              {s.thumbnailsDesc}
             </p>
           </div>
         </div>
@@ -38,10 +41,10 @@ export function ModuleSettings({
           <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
             <div>
               <p className="text-xs font-semibold text-[var(--text-primary)]">
-                Mostrar miniaturas reales de páginas
+                {s.showRealThumbnails}
               </p>
               <p className="text-[11px] text-[var(--text-muted)]">
-                Si se desactiva, muestra tarjetas ligeras con ícono y número para consumo mínimo de RAM.
+                {s.showRealThumbnailsDesc}
               </p>
             </div>
             <Switch
@@ -55,18 +58,18 @@ export function ModuleSettings({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  Calidad de Miniatura
+                  {s.thumbnailQuality}
                 </p>
                 <p className="text-[11px] text-[var(--text-muted)]">
-                  Define la resolución de renderizado en el lienzo de previsualización.
+                  {s.thumbnailQualityDesc}
                 </p>
               </div>
               <div className="flex gap-1.5">
                 {(
                   [
-                    { id: 'low', label: 'Baja (Rápida)' },
-                    { id: 'medium', label: 'Media' },
-                    { id: 'high', label: 'Alta (Nítida)' }
+                    { id: 'low', label: s.qualityLow },
+                    { id: 'medium', label: s.qualityMedium },
+                    { id: 'high', label: s.qualityHigh }
                   ] as const
                 ).map((q) => (
                   <button
@@ -90,10 +93,10 @@ export function ModuleSettings({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  Límite de seguridad para archivos grandes
+                  {s.largeFilesLimit}
                 </p>
                 <p className="text-[11px] text-[var(--text-muted)]">
-                  Si un PDF supera este límite de páginas, las vistas previas se cargan en lotes de 20.
+                  {s.largeFilesLimitDesc}
                 </p>
               </div>
               <select
@@ -103,18 +106,11 @@ export function ModuleSettings({
                 }
                 className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)]"
               >
-                <option value={40} className="bg-zinc-900">
-                  40 páginas
-                </option>
-                <option value={100} className="bg-zinc-900">
-                  100 páginas
-                </option>
-                <option value={200} className="bg-zinc-900">
-                  200 páginas
-                </option>
-                <option value={500} className="bg-zinc-900">
-                  500 páginas
-                </option>
+                {[40, 100, 200, 500].map((count) => (
+                  <option key={count} value={count} className="bg-zinc-900">
+                    {s.pagesCount.replace('{0}', String(count))}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -130,10 +126,10 @@ export function ModuleSettings({
             </div>
             <div>
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                Comportamiento de Guardado y Salida
+                {s.saveBehaviorTitle}
               </h3>
               <p className="text-xs text-[var(--text-muted)]">
-                Elige dónde se guardan los archivos PDF e imágenes procesadas por defecto.
+                {s.saveBehaviorDesc}
               </p>
             </div>
           </div>
@@ -141,35 +137,35 @@ export function ModuleSettings({
           <button
             type="button"
             onClick={onResetDefaults}
-            title="Restaurar valores por defecto"
+            title={s.restoreBtn}
             className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
-            <RotateCcw className="h-3 w-3" /> Restaurar
+            <RotateCcw className="h-3 w-3" /> {s.restoreBtn}
           </button>
         </div>
 
         <div className="space-y-3 pt-1">
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
             <p className="mb-2 text-xs font-semibold text-[var(--text-primary)]">
-              Modo de destino predeterminado
+              {s.defaultDestMode}
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {(
                 [
                   {
                     id: 'same-folder',
-                    title: 'Misma carpeta',
-                    desc: 'Junto al original con sufijo'
+                    title: s.destSame,
+                    desc: s.destSameDesc
                   },
                   {
                     id: 'custom-folder',
-                    title: 'Carpeta fija',
-                    desc: 'Directorio predeterminado'
+                    title: s.destFixed,
+                    desc: s.destFixedDesc
                   },
                   {
                     id: 'ask-always',
-                    title: 'Preguntar siempre',
-                    desc: 'Abrir diálogo al guardar'
+                    title: s.destAsk,
+                    desc: s.destAskDesc
                   }
                 ] as const
               ).map((opt) => (
@@ -194,10 +190,10 @@ export function ModuleSettings({
             <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  Carpeta predeterminada de salida
+                  {s.defaultOutDir}
                 </p>
                 <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--text-muted)]">
-                  {settings.customOutputDir || 'Documentos (Por defecto)'}
+                  {settings.customOutputDir || s.defaultDocs}
                 </p>
               </div>
               <button
@@ -205,7 +201,7 @@ export function ModuleSettings({
                 onClick={onBrowseCustomFolder}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-500/25"
               >
-                <FolderOpen className="h-3.5 w-3.5" /> Elegir carpeta
+                <FolderOpen className="h-3.5 w-3.5" /> {s.chooseDir}
               </button>
             </div>
           )}
@@ -213,10 +209,10 @@ export function ModuleSettings({
           <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
             <div>
               <p className="text-xs font-semibold text-[var(--text-primary)]">
-                Sufijo automático de archivos
+                {s.autoSuffix}
               </p>
               <p className="text-[11px] text-[var(--text-muted)]">
-                Se añade al nombre original para no sobrescribir tus documentos.
+                {s.autoSuffixDesc}
               </p>
             </div>
             <input
@@ -233,10 +229,10 @@ export function ModuleSettings({
           <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
             <div>
               <p className="text-xs font-semibold text-[var(--text-primary)]">
-                Mostrar archivo en el Explorador al terminar
+                {s.revealInExplorer}
               </p>
               <p className="text-[11px] text-[var(--text-muted)]">
-                Resalta automáticamente el archivo PDF o carpeta generada en Windows Explorer.
+                {s.revealInExplorerDesc}
               </p>
             </div>
             <Switch
@@ -250,4 +246,3 @@ export function ModuleSettings({
     </div>
   )
 }
-

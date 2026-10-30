@@ -1,4 +1,5 @@
 export * from './theme/ThemeProvider'
 export * from './theme/ThemeToggle'
 export * from './components/primitives'
-
+export * from './i18n/types'
+export * from './i18n/I18nProvider'

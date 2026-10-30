@@ -5,6 +5,7 @@ import {
   Loader2,
   Sparkles
 } from 'lucide-react'
+import { useI18n } from '@panel/ui-kit'
 import type { OutputSaveMode, PdfOperationOutput } from '../../shared/types'
 
 function formatBytes(bytes?: number): string {
@@ -39,6 +40,9 @@ export function ActionFooter({
   onRevealResult,
   onOpenResult
 }: ActionFooterProps): JSX.Element {
+  const { t } = useI18n()
+  const f = t.pdf.footer
+
   return (
     <div className="shrink-0 space-y-2">
       {/* Banner de resultado reciente con comparativa y acceso directo */}
@@ -50,10 +54,10 @@ export function ActionFooter({
               <p className="font-semibold text-[var(--text-primary)]">{lastResult.message}</p>
               {lastResult.originalBytes && lastResult.outputBytes && (
                 <p className="font-mono text-[11px] text-emerald-400">
-                  Peso Original: {formatBytes(lastResult.originalBytes)} → Nuevo:{' '}
+                  {f.originalSize} {formatBytes(lastResult.originalBytes)} → {f.newSize}{' '}
                   {formatBytes(lastResult.outputBytes)}
                   {typeof lastResult.savedPercent === 'number' && lastResult.savedPercent > 0
-                    ? ` (-${lastResult.savedPercent}% ahorrado)`
+                    ? ` ${f.savedPercent.replace('{0}', String(lastResult.savedPercent))}`
                     : ''}
                 </p>
               )}
@@ -68,14 +72,14 @@ export function ActionFooter({
                   onClick={() => onRevealResult(lastResult.outputPath!)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 font-medium text-emerald-300 transition hover:bg-emerald-500/25"
                 >
-                  <FolderOpen className="h-3.5 w-3.5" /> Mostrar en carpeta
+                  <FolderOpen className="h-3.5 w-3.5" /> {f.revealBtn}
                 </button>
                 <button
                   type="button"
                   onClick={() => onOpenResult(lastResult.outputPath!)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1 font-medium text-[var(--text-primary)] transition hover:bg-[var(--bg-card-hover)]"
                 >
-                  <ExternalLink className="h-3.5 w-3.5" /> Abrir
+                  <ExternalLink className="h-3.5 w-3.5" /> {t.common.open}
                 </button>
               </>
             )}
@@ -89,20 +93,20 @@ export function ActionFooter({
           <span className="text-xs font-medium text-[var(--text-secondary)]">{summaryText}</span>
 
           <div className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 text-[11px]">
-            <span className="text-[var(--text-muted)]">Destino:</span>
+            <span className="text-[var(--text-muted)]">{f.destLabel}</span>
             <select
               value={outputMode}
               onChange={(e) => onChangeOutputMode(e.target.value as OutputSaveMode)}
               className="bg-transparent font-medium text-[var(--text-primary)] focus:outline-none"
             >
               <option value="same-folder" className="bg-zinc-900 text-zinc-100">
-                Misma carpeta del original
+                {f.sameFolderOpt}
               </option>
               <option value="custom-folder" className="bg-zinc-900 text-zinc-100">
-                Carpeta predeterminada
+                {f.fixedFolderOpt}
               </option>
               <option value="ask-always" className="bg-zinc-900 text-zinc-100">
-                Preguntar siempre dónde guardar
+                {f.askAlwaysOpt}
               </option>
             </select>
           </div>
@@ -117,7 +121,7 @@ export function ActionFooter({
           {busy ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Procesando PDF…
+              {t.common.loading}
             </>
           ) : (
             <>
@@ -130,4 +134,3 @@ export function ActionFooter({
     </div>
   )
 }
-

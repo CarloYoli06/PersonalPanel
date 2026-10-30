@@ -1,0 +1,36 @@
+[package]
+name = "panel-hub-principal"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Host principal en Tauri v2 para el monorepo modular PersonalPanel"
+default-run = "panel-personal-hub"
+
+[lib]
+name = "panel_hub_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "panel-personal-hub"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { workspace = true }
+tauri-plugin-shell = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+base64 = { workspace = true }
+image = { workspace = true }
+
+# Crates internos del Monorepo:
+panel-core-sdk = { path = "../../../packages/core-sdk/src-rust" }
+panel-mod-optimizer = { path = "../../../modules/mod-optimizer/src-rust" }
+panel-mod-scanner = { path = "../../../modules/mod-scanner/src-rust" }
+panel-mod-video = { path = "../../../modules/mod-video/src-rust" }
+panel-mod-pdf = { path = "../../../modules/mod-pdf/src-rust" }
+

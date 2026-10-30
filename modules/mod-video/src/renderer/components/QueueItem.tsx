@@ -10,32 +10,28 @@ import {
   X
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useI18n } from '@panel/ui-kit'
 import type { Job, JobStatus } from '../../shared/types'
 import { formatBytes, formatDuration, formatEta } from '../lib/format'
 
-const STATUS_META: Record<JobStatus, { label: string; className: string; icon: LucideIcon }> = {
+const STATUS_ICONS: Record<JobStatus, { className: string; icon: LucideIcon }> = {
   pending: {
-    label: 'En espera',
     className: 'bg-[var(--bg-card)] text-[var(--text-secondary)] ring-[var(--border-subtle)]',
     icon: Clock
   },
   compressing: {
-    label: 'Comprimiendo...',
     className: 'bg-violet-500/15 text-violet-600 dark:text-violet-300 ring-violet-500/30',
     icon: Loader2
   },
   done: {
-    label: 'Completado',
     className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 ring-emerald-500/25',
     icon: CheckCircle2
   },
   error: {
-    label: 'Error',
     className: 'bg-rose-500/15 text-rose-600 dark:text-rose-300 ring-rose-500/25',
     icon: AlertCircle
   },
   cancelled: {
-    label: 'Cancelado',
     className: 'bg-amber-500/15 text-amber-600 dark:text-amber-300 ring-amber-500/25',
     icon: Ban
   }
@@ -49,8 +45,19 @@ interface QueueItemProps {
 }
 
 export function QueueItem({ job, onRemove, onRetry, onReveal }: QueueItemProps): JSX.Element {
-  const meta = STATUS_META[job.status]
+  const { t } = useI18n()
+  const meta = STATUS_ICONS[job.status]
   const StatusIcon = meta.icon
+  const statusLabel =
+    job.status === 'pending'
+      ? t.video.statusPending
+      : job.status === 'compressing'
+        ? t.video.statusCompressing
+        : job.status === 'done'
+          ? t.video.statusDone
+          : job.status === 'error'
+            ? t.video.statusError
+            : t.video.statusCancelled
   const isActive = job.status === 'compressing'
   const isDone = job.status === 'done'
   const progress = isDone ? 100 : job.progress
@@ -129,7 +136,7 @@ export function QueueItem({ job, onRemove, onRetry, onReveal }: QueueItemProps):
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset ${meta.className}`}
         >
           <StatusIcon className={`h-3 w-3 ${isActive ? 'animate-spin' : ''}`} />
-          {meta.label}
+          {statusLabel}
         </span>
 
         <div className="flex shrink-0 items-center">
@@ -138,7 +145,7 @@ export function QueueItem({ job, onRemove, onRetry, onReveal }: QueueItemProps):
               id={`reveal-${job.id}`}
               type="button"
               className="icon-btn"
-              title="Mostrar en carpeta"
+              title={t.pdf.footer.revealBtn}
               onClick={() => onReveal(job.outputPath!)}
             >
               <FolderSearch className="h-4 w-4" />

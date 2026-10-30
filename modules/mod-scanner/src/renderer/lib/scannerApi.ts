@@ -1,4 +1,14 @@
-import type { ScannerModuleAPI, ScannerConfig, ScanResponse } from '../../shared/types'
+import { invoke } from '@tauri-apps/api/core'
+import type {
+  FileOperationResult,
+  SaveImagePayload,
+  SavePdfPayload,
+  ScanOptions,
+  ScanResponse,
+  ScannerConfig,
+  ScannerDevice,
+  ScannerModuleAPI
+} from '../../shared/types'
 
 declare global {
   interface PanelWindowBridge {
@@ -6,11 +16,55 @@ declare global {
   }
   interface Window {
     panelApi?: PanelWindowBridge
+    __TAURI_INTERNALS__?: unknown
   }
 }
 
+export const isTauriScanner =
+  typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__)
+
 export const isElectronScanner =
-  typeof window !== 'undefined' && Boolean(window.panelApi?.scanner)
+  typeof window !== 'undefined' &&
+  (Boolean(window.__TAURI_INTERNALS__) || Boolean(window.panelApi?.scanner))
+
+const tauriScannerApi: ScannerModuleAPI = {
+  async getConfig(): Promise<ScannerConfig> {
+    return invoke<ScannerConfig>('scanner_get_config')
+  },
+  async setConfig(data: Partial<ScannerConfig>): Promise<ScannerConfig> {
+    return invoke<ScannerConfig>('scanner_set_config', { data })
+  },
+  async resetDevice(): Promise<boolean> {
+    return invoke<boolean>('scanner_reset_device')
+  },
+  async listScanners(): Promise<ScannerDevice[]> {
+    return invoke<ScannerDevice[]>('scanner_list')
+  },
+  async scan(opts?: ScanOptions): Promise<ScanResponse> {
+    return invoke<ScanResponse>('scanner_scan', { opts: opts ?? {} })
+  },
+  async scanSmart(opts?: ScanOptions): Promise<ScanResponse> {
+    return invoke<ScanResponse>('scanner_scan_smart', { opts: opts ?? {} })
+  },
+  async saveImage(data: SaveImagePayload): Promise<FileOperationResult> {
+    return invoke<FileOperationResult>('scanner_save_image', { data })
+  },
+  async savePDF(data: SavePdfPayload): Promise<FileOperationResult> {
+    return invoke<FileOperationResult>('scanner_save_pdf', { data })
+  },
+  async readBase64(filePath: string): Promise<FileOperationResult> {
+    return invoke<FileOperationResult>('scanner_read_base64', { filePath })
+  },
+  async showOpenFolder(): Promise<{ canceled: boolean; filePaths: string[] }> {
+    return invoke<{ canceled: boolean; filePaths: string[] }>('scanner_show_open_folder')
+  },
+  async getDocsPath(): Promise<string> {
+    return invoke<string>('scanner_get_docs_path')
+  },
+  async openPath(path: string): Promise<string> {
+    return invoke<string>('scanner_open_path', { path })
+  }
+}
 
 let mockConfig: ScannerConfig = {
   deviceId: 'WIA-SIM-001',
@@ -95,9 +149,11 @@ export const browserMockScannerApi: ScannerModuleAPI = {
 }
 
 export function getScannerApi(): ScannerModuleAPI {
+  if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+    return tauriScannerApi
+  }
   if (typeof window !== 'undefined' && window.panelApi?.scanner) {
     return window.panelApi.scanner
   }
   return browserMockScannerApi
 }
-

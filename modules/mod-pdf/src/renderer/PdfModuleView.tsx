@@ -19,7 +19,7 @@ import {
   Trash2
 } from 'lucide-react'
 import type { ModuleViewProps } from '@panel/core-sdk'
-import { GlobalToast, PanelCard, Switch } from '@panel/ui-kit'
+import { GlobalToast, PanelCard, Switch, useI18n } from '@panel/ui-kit'
 import type {
   ImageInputItem,
   OrganizedPageSpec,
@@ -118,6 +118,7 @@ function ImagePreviewThumb({ filePath }: { filePath: string }): JSX.Element {
 }
 
 export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+  const { t } = useI18n()
   const api = useMemo(() => getPdfApi(), [])
   const onStatusChangeRef = useRef(onStatusChange)
   onStatusChangeRef.current = onStatusChange
@@ -219,6 +220,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
   const [stripAllMetadata, setStripAllMetadata] = useState(false)
   const [securityAction, setSecurityAction] = useState<'none' | 'encrypt' | 'decrypt'>('none')
   const [securityPassword, setSecurityPassword] = useState('')
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false)
 
   // Helpers de carga de archivos
   const addPdfsToMerge = async (paths: string[]): Promise<void> => {
@@ -576,18 +578,112 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
   const handleContainerDragOver = (e: React.DragEvent): void => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
+    if (!isDraggingFiles) setIsDraggingFiles(true)
   }
+
+  const handleContainerDragLeave = (e: React.DragEvent): void => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDraggingFiles(false)
+    }
+  }
+
+  const dispatchDroppedPaths = useCallback(
+    (paths: string[]): void => {
+      if (busy || paths.length === 0) return
+
+      const isImageMode = activeTab === 'convert' && convertSubTool === 'img-to-pdf'
+      const validExts = isImageMode
+        ? ['.jpg', '.jpeg', '.png', '.webp', '.bmp']
+        : ['.pdf']
+
+      const validPaths = paths.filter((p) =>
+        validExts.some((ext) => p.toLowerCase().endsWith(ext))
+      )
+
+      if (validPaths.length === 0) return
+
+      if (activeTab === 'merge') {
+        void addPdfsToMerge(validPaths)
+      } else if (activeTab === 'split') {
+        void loadSinglePdfForSplit([validPaths[0]])
+      } else if (activeTab === 'organize') {
+        void loadPdfForOrganize(validPaths, Boolean(organizeBaseDoc))
+      } else if (activeTab === 'compress') {
+        void loadPdfForCompress([validPaths[0]])
+      } else if (activeTab === 'convert') {
+        if (convertSubTool === 'img-to-pdf') {
+          void addImagesForConvert(validPaths)
+        } else {
+          void loadPdfForConvert([validPaths[0]])
+        }
+      }
+    },
+    [
+      busy,
+      activeTab,
+      convertSubTool,
+      organizeBaseDoc,
+      addPdfsToMerge,
+      loadSinglePdfForSplit,
+      loadPdfForOrganize,
+      loadPdfForCompress,
+      addImagesForConvert,
+      loadPdfForConvert
+    ]
+  )
+
+  // Escuchar eventos nativos de arrastre de archivos en Windows (Tauri v2 drag-drop)
+  useEffect(() => {
+    let unlisten: (() => void) | undefined
+    let isMounted = true
+
+    if (
+      typeof window !== 'undefined' &&
+      Boolean((window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__)
+    ) {
+      import('@tauri-apps/api/webview')
+        .then(({ getCurrentWebview }) => {
+          if (!isMounted) return
+          getCurrentWebview()
+            .onDragDropEvent((event) => {
+              if (!isMounted) return
+              if (event.payload.type === 'enter' || event.payload.type === 'over') {
+                setIsDraggingFiles(true)
+              } else if (event.payload.type === 'leave') {
+                setIsDraggingFiles(false)
+              } else if (event.payload.type === 'drop') {
+                setIsDraggingFiles(false)
+                const droppedPaths = event.payload.paths
+                if (droppedPaths && droppedPaths.length > 0) {
+                  dispatchDroppedPaths(droppedPaths)
+                }
+              }
+            })
+            .then((fn) => {
+              if (isMounted) {
+                unlisten = fn
+              } else {
+                fn()
+              }
+            })
+            .catch((err) => {
+              console.error('Error onDragDropEvent in PdfModuleView:', err)
+            })
+        })
+        .catch(() => {})
+    }
+
+    return () => {
+      isMounted = false
+      unlisten?.()
+    }
+  }, [dispatchDroppedPaths])
 
   const handleContainerDrop = (e: React.DragEvent): void => {
     e.preventDefault()
     if (busy || !e.dataTransfer?.files?.length) return
 
     const files = Array.from(e.dataTransfer.files)
-    const isImageMode = activeTab === 'convert' && convertSubTool === 'img-to-pdf'
-    const validExts = isImageMode
-      ? ['.jpg', '.jpeg', '.png', '.webp', '.bmp']
-      : ['.pdf']
-
     const paths = files
       .map((f) => {
         try {
@@ -596,30 +692,17 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
           return (f as File & { path?: string }).path || ''
         }
       })
-      .filter((p) => p && validExts.some((ext) => p.toLowerCase().endsWith(ext)))
+      .filter(Boolean)
 
-    if (paths.length === 0) return
-
-    if (activeTab === 'merge') {
-      void addPdfsToMerge(paths)
-    } else if (activeTab === 'split') {
-      void loadSinglePdfForSplit([paths[0]])
-    } else if (activeTab === 'organize') {
-      void loadPdfForOrganize(paths, Boolean(organizeBaseDoc))
-    } else if (activeTab === 'compress') {
-      void loadPdfForCompress([paths[0]])
-    } else if (activeTab === 'convert') {
-      if (convertSubTool === 'img-to-pdf') {
-        void addImagesForConvert(paths)
-      } else {
-        void loadPdfForConvert([paths[0]])
-      }
+    if (paths.length > 0) {
+      dispatchDroppedPaths(paths)
     }
   }
 
   return (
     <div
       onDragOver={handleContainerDragOver}
+      onDragLeave={handleContainerDragLeave}
       onDrop={handleContainerDrop}
       className="flex h-full flex-col gap-3.5 overflow-hidden"
     >
@@ -632,14 +715,14 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-[var(--text-primary)]">
-                PDF Studio · Control Total de PDF
+                {t.pdf.title}
               </h2>
               <span className="rounded-md bg-rose-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-rose-400">
-                100% Local
+                {t.pdf.localTag}
               </span>
             </div>
             <p className="text-xs text-[var(--text-muted)]">
-              Unir, dividir, organizar páginas con vista previa real, comprimir y convertir sin subir tus documentos a la nube
+              {t.pdf.subtitle}
             </p>
           </div>
         </div>
@@ -647,7 +730,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
         <div className="flex items-center gap-2">
           {!isElectronPdf && (
             <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-400">
-              Modo Simulación
+              {t.pdf.simulationMode}
             </span>
           )}
           {progressText && (
@@ -663,12 +746,12 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
       <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-[var(--border-subtle)] pb-2">
         {(
           [
-            { id: 'merge', label: 'Unir PDF', icon: Layers },
-            { id: 'split', label: 'Dividir y Extraer', icon: Scissors },
-            { id: 'organize', label: 'Organizar y Rotar', icon: LayoutGrid },
-            { id: 'compress', label: 'Comprimir PDF', icon: Gauge },
-            { id: 'convert', label: 'Convertir y Sellar', icon: Stamp },
-            { id: 'settings', label: 'Ajustes de PDF Studio', icon: Settings }
+            { id: 'merge', label: t.pdf.tabs.merge, icon: Layers },
+            { id: 'split', label: t.pdf.tabs.split, icon: Scissors },
+            { id: 'organize', label: t.pdf.tabs.organize, icon: LayoutGrid },
+            { id: 'compress', label: t.pdf.tabs.compress, icon: Gauge },
+            { id: 'convert', label: t.pdf.tabs.convert, icon: Stamp },
+            { id: 'settings', label: t.pdf.tabs.settings, icon: Settings }
           ] as const
         ).map((tab) => {
           const Icon = tab.icon
@@ -706,6 +789,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
               multiple
               compact={mergeList.length > 0}
               busy={busy}
+              isDragging={isDraggingFiles}
               onBrowse={async () => {
                 const paths = await api.selectPdfFiles(true)
                 await addPdfsToMerge(paths)
@@ -718,8 +802,9 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                      Cola de fusión ({mergeList.length} documentos ·{' '}
-                      {mergeList.reduce((a, b) => a + b.pageCount, 0)} páginas totales)
+                      {t.pdf.mergeQueueTitle
+                        .replace('{0}', String(mergeList.length))
+                        .replace('{1}', String(mergeList.reduce((a, b) => a + b.pageCount, 0)))}
                     </h3>
                   </div>
                   <button
@@ -727,7 +812,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                     onClick={() => setMergeList([])}
                     className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs text-rose-400 transition hover:bg-rose-500/15"
                   >
-                    <Trash2 className="h-3.5 w-3.5" /> Vaciar lista
+                    <Trash2 className="h-3.5 w-3.5" /> {t.pdf.clearList}
                   </button>
                 </div>
 
@@ -747,7 +832,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                             {doc.name}
                           </p>
                           <p className="mt-0.5 font-mono text-[11px] text-[var(--text-muted)]">
-                            {formatSize(doc.sizeBytes)} · {doc.pageCount} páginas
+                            {formatSize(doc.sizeBytes)} · {doc.pageCount} {t.pdf.settingsView.pagesCount.replace('{0}', '')}
                           </p>
                         </div>
                       </div>
@@ -764,7 +849,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                               return copy
                             })
                           }}
-                          title="Subir posición"
+                          title={t.pdf.moveUp}
                           className="icon-btn"
                         >
                           <ArrowUp className="h-3.5 w-3.5" />
@@ -780,7 +865,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                               return copy
                             })
                           }}
-                          title="Bajar posición"
+                          title={t.pdf.moveDown}
                           className="icon-btn"
                         >
                           <ArrowDown className="h-3.5 w-3.5" />
@@ -790,7 +875,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           onClick={() =>
                             setMergeList((prev) => prev.filter((item) => item.path !== doc.path))
                           }
-                          title="Quitar de la lista"
+                          title={t.pdf.removeFromList}
                           className="icon-btn text-rose-400 hover:text-rose-300"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -814,7 +899,8 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                 mode="pdf"
                 multiple={false}
                 busy={busy}
-                title="Selecciona un PDF para dividir o extraer páginas"
+                isDragging={isDraggingFiles}
+                title={t.pdf.splitDropzoneTitle}
                 onBrowse={async () => {
                   const paths = await api.selectPdfFiles(false)
                   await loadSinglePdfForSplit(paths)
@@ -832,7 +918,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           {splitDoc.name}
                         </h3>
                         <p className="font-mono text-[11px] text-[var(--text-muted)]">
-                          {formatSize(splitDoc.sizeBytes)} · {splitDoc.pageCount} páginas
+                          {formatSize(splitDoc.sizeBytes)} · {splitDoc.pageCount} {t.pdf.settingsView.pagesCount.replace('{0}', '')}
                         </p>
                       </div>
                     </div>
@@ -840,9 +926,9 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                     <div className="flex flex-wrap items-center gap-2">
                       {(
                         [
-                          { id: 'ranges', label: 'Por Rangos' },
-                          { id: 'selected-pages', label: 'Seleccionar Páginas' },
-                          { id: 'explode-all', label: 'Separar Todas las Páginas' }
+                          { id: 'ranges', label: t.pdf.splitModeRanges },
+                          { id: 'selected-pages', label: t.pdf.splitModePages },
+                          { id: 'explode-all', label: t.pdf.splitModeAll }
                         ] as const
                       ).map((m) => (
                         <button
@@ -864,7 +950,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                         onClick={() => setSplitDoc(null)}
                         className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-rose-400"
                       >
-                        Cambiar PDF
+                        {t.pdf.changePdf}
                       </button>
                     </div>
                   </div>
@@ -873,7 +959,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                     <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                       <div className="min-w-[240px] flex-1">
                         <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                          Rangos de páginas (ej. 1-4, 7, 10-15)
+                          {t.pdf.rangesLabel}
                         </label>
                         <input
                           type="text"
@@ -886,7 +972,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
 
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-[var(--text-secondary)]">
-                          Unir todos los rangos en un solo PDF
+                          {t.pdf.mergeRangesIntoOne}
                         </span>
                         <Switch
                           checked={mergeRangesIntoOne}
@@ -900,8 +986,9 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                   {splitMode === 'selected-pages' && (
                     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3.5 py-2.5 text-xs">
                       <span className="text-[var(--text-secondary)]">
-                        Haz clic sobre las miniaturas que deseas conservar ({selectedSplitPageIds.length}{' '}
-                        de {splitDoc.pageCount} seleccionadas)
+                        {t.pdf.splitPagesHint
+                          .replace('{0}', String(selectedSplitPageIds.length))
+                          .replace('{1}', String(splitDoc.pageCount))}
                       </span>
                       <div className="flex gap-1.5">
                         <button
@@ -911,14 +998,14 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           }
                           className="rounded-lg bg-[var(--bg-surface)] px-2.5 py-1 text-[11px] font-medium hover:text-rose-400"
                         >
-                          Todas
+                          {t.pdf.selectAll}
                         </button>
                         <button
                           type="button"
                           onClick={() => setSelectedSplitPageIds([])}
                           className="rounded-lg bg-[var(--bg-surface)] px-2.5 py-1 text-[11px] font-medium hover:text-rose-400"
                         >
-                          Ninguna
+                          {t.pdf.selectNone}
                         </button>
                         <button
                           type="button"
@@ -931,7 +1018,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           }
                           className="rounded-lg bg-[var(--bg-surface)] px-2.5 py-1 text-[11px] font-medium hover:text-rose-400"
                         >
-                          Impares
+                          {t.pdf.selectOdd}
                         </button>
                         <button
                           type="button"
@@ -944,7 +1031,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           }
                           className="rounded-lg bg-[var(--bg-surface)] px-2.5 py-1 text-[11px] font-medium hover:text-rose-400"
                         >
-                          Pares
+                          {t.pdf.selectEven}
                         </button>
                       </div>
                     </div>
@@ -983,7 +1070,8 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                 mode="pdf"
                 multiple={false}
                 busy={busy}
-                title="Selecciona un PDF para organizar, rotar o eliminar páginas"
+                isDragging={isDraggingFiles}
+                title={t.pdf.organizeDropzoneTitle}
                 onBrowse={async () => {
                   const paths = await api.selectPdfFiles(false)
                   await loadPdfForOrganize(paths, false)
@@ -1003,7 +1091,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                         {organizeBaseDoc.name}
                       </h3>
                       <p className="font-mono text-[11px] text-[var(--text-muted)]">
-                        {organizedPages.length} páginas activas en el lienzo
+                        {t.pdf.activePagesCount.replace('{0}', String(organizedPages.length))}
                       </p>
                     </div>
                   </div>
@@ -1021,7 +1109,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                       }
                       className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
-                      <RotateCcw className="h-3.5 w-3.5" /> Rotar todo -90°
+                      <RotateCcw className="h-3.5 w-3.5" /> {t.pdf.rotateAllLeft}
                     </button>
                     <button
                       type="button"
@@ -1035,7 +1123,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                       }
                       className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
-                      <RotateCw className="h-3.5 w-3.5" /> Rotar todo +90°
+                      <RotateCw className="h-3.5 w-3.5" /> {t.pdf.rotateAllRight}
                     </button>
                     <button
                       type="button"
@@ -1045,14 +1133,14 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                       }}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-400 hover:bg-rose-500/25"
                     >
-                      <FilePlus2 className="h-3.5 w-3.5" /> Insertar otro PDF
+                      <FilePlus2 className="h-3.5 w-3.5" /> {t.pdf.insertOtherPdf}
                     </button>
                     <button
                       type="button"
                       onClick={() => void loadPdfForOrganize([organizeBaseDoc.path], false)}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
-                      Restablecer
+                      {t.pdf.resetBtn}
                     </button>
                     <button
                       type="button"
@@ -1062,7 +1150,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                       }}
                       className="inline-flex items-center gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs text-rose-400"
                     >
-                      Cerrar PDF
+                      {t.pdf.closePdf}
                     </button>
                   </div>
                 </PanelCard>
@@ -1112,7 +1200,8 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                 mode="pdf"
                 multiple={false}
                 busy={busy}
-                title="Selecciona un PDF pesado para reducir su tamaño"
+                isDragging={isDraggingFiles}
+                title={t.pdf.compressDropzoneTitle}
                 onBrowse={async () => {
                   const paths = await api.selectPdfFiles(false)
                   await loadPdfForCompress(paths)
@@ -1132,8 +1221,9 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                         {compressDoc.name}
                       </h3>
                       <p className="font-mono text-xs text-rose-400">
-                        Tamaño actual: {formatSize(compressDoc.sizeBytes)} · {compressDoc.pageCount}{' '}
-                        páginas
+                        {t.pdf.currentSize
+                          .replace('{0}', formatSize(compressDoc.sizeBytes))
+                          .replace('{1}', String(compressDoc.pageCount))}
                       </p>
                     </div>
                   </div>
@@ -1142,7 +1232,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                     onClick={() => setCompressDoc(null)}
                     className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-rose-400"
                   >
-                    Cambiar archivo
+                    {t.pdf.changeFile}
                   </button>
                 </div>
 
@@ -1151,21 +1241,21 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                     [
                       {
                         id: 'low',
-                        title: 'Baja · Alta Calidad Visual',
-                        badge: 'Sin pérdida',
-                        desc: 'Limpia metadatos, purga objetos huérfanos y activa flujos comprimidos ObjectStreams conservando vectores al 100%.'
+                        title: t.pdf.compressLowTitle,
+                        badge: t.pdf.compressLowBadge,
+                        desc: t.pdf.compressLowDesc
                       },
                       {
                         id: 'medium',
-                        title: 'Media · Equilibrada (Recomendada)',
-                        badge: '150 DPI · ~75% JPEG',
-                        desc: 'Re-muestrea imágenes y páginas pesadas a 150 DPI logrando una gran reducción de peso con excelente lectura.'
+                        title: t.pdf.compressMedTitle,
+                        badge: t.pdf.compressMedBadge,
+                        desc: t.pdf.compressMedDesc
                       },
                       {
                         id: 'extreme',
-                        title: 'Extrema · Máxima Reducción',
-                        badge: '100 DPI · ~50% JPEG',
-                        desc: 'Ideal para portales gubernamentales o envío por correo con límite estricto de megabytes.'
+                        title: t.pdf.compressExtTitle,
+                        badge: t.pdf.compressExtBadge,
+                        desc: t.pdf.compressExtDesc
                       }
                     ] as const
                   ).map((lvl) => {
@@ -1212,10 +1302,10 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  { id: 'img-to-pdf', label: 'Imágenes a PDF', icon: ImageIcon },
-                  { id: 'pdf-to-img', label: 'PDF a Imágenes (JPG/PNG)', icon: Layers },
-                  { id: 'stamp', label: 'Numerar y Marca de Agua', icon: Stamp },
-                  { id: 'metadata', label: 'Metadatos y Seguridad', icon: Lock }
+                  { id: 'img-to-pdf', label: t.pdf.subImgToPdf, icon: ImageIcon },
+                  { id: 'pdf-to-img', label: t.pdf.subPdfToImg, icon: Layers },
+                  { id: 'stamp', label: t.pdf.subStamp, icon: Stamp },
+                  { id: 'metadata', label: t.pdf.subMetadata, icon: Lock }
                 ] as const
               ).map((sub) => {
                 const SubIcon = sub.icon
@@ -1249,6 +1339,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                   multiple
                   compact={imageItems.length > 0}
                   busy={busy}
+                  isDragging={isDraggingFiles}
                   onBrowse={async () => {
                     const paths = await api.selectImageFiles()
                     await addImagesForConvert(paths)
@@ -1261,14 +1352,14 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                     <PanelCard className="p-4 lg:col-span-2">
                       <div className="mb-3 flex items-center justify-between">
                         <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                          Imágenes seleccionadas ({imageItems.length})
+                          {t.pdf.selectedImages.replace('{0}', String(imageItems.length))}
                         </h4>
                         <button
                           type="button"
                           onClick={() => setImageItems([])}
                           className="text-xs text-rose-400 hover:underline"
                         >
-                          Limpiar todas
+                          {t.pdf.clearAllImages}
                         </button>
                       </div>
 
@@ -1337,12 +1428,12 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
 
                     <PanelCard className="space-y-3.5 p-4">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                        Opciones de Página e Imagen
+                        {t.pdf.imgOptionsTitle}
                       </h4>
 
                       <div>
                         <label className="block text-xs font-medium text-[var(--text-primary)]">
-                          Tamaño de hoja
+                          {t.pdf.pageSize}
                         </label>
                         <select
                           value={imgPageSize}
@@ -1352,20 +1443,20 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           className="mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs text-[var(--text-primary)]"
                         >
                           <option value="a4" className="bg-zinc-900">
-                            A4 Estándar
+                            {t.pdf.pageSizeA4}
                           </option>
                           <option value="letter" className="bg-zinc-900">
-                            Carta (US Letter)
+                            {t.pdf.pageSizeLetter}
                           </option>
                           <option value="fit" className="bg-zinc-900">
-                            Ajustar al tamaño de cada imagen
+                            {t.pdf.pageSizeFit}
                           </option>
                         </select>
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-[var(--text-primary)]">
-                          Orientación
+                          {t.pdf.orientation}
                         </label>
                         <select
                           value={imgOrientation}
@@ -1377,27 +1468,27 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           className="mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs text-[var(--text-primary)]"
                         >
                           <option value="auto" className="bg-zinc-900">
-                            Automática según la foto
+                            {t.pdf.orientationAuto}
                           </option>
                           <option value="portrait" className="bg-zinc-900">
-                            Vertical (Portrait)
+                            {t.pdf.orientationPortrait}
                           </option>
                           <option value="landscape" className="bg-zinc-900">
-                            Horizontal (Landscape)
+                            {t.pdf.orientationLandscape}
                           </option>
                         </select>
                       </div>
 
                       <div>
                         <label className="block text-xs font-medium text-[var(--text-primary)]">
-                          Márgenes
+                          {t.pdf.margins}
                         </label>
                         <div className="mt-1 grid grid-cols-3 gap-1.5">
                           {(
                             [
-                              { pt: 0, label: 'Sin margen' },
-                              { pt: 20, label: 'Normal' },
-                              { pt: 40, label: 'Amplio' }
+                              { pt: 0, label: t.pdf.marginNone },
+                              { pt: 20, label: t.pdf.marginNormal },
+                              { pt: 40, label: t.pdf.marginWide }
                             ] as const
                           ).map((m) => (
                             <button
@@ -1419,10 +1510,10 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                       <div className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
                         <div>
                           <p className="text-xs font-semibold text-[var(--text-primary)]">
-                            Optimizar fotos pesadas
+                            {t.pdf.optimizeHeavyImages}
                           </p>
                           <p className="text-[10px] text-[var(--text-muted)]">
-                            Redimensiona imágenes gigantes de cámara para evitar PDFs pesados.
+                            {t.pdf.optimizeHeavyImagesDesc}
                           </p>
                         </div>
                         <Switch
@@ -1445,6 +1536,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                     mode="pdf"
                     multiple={false}
                     busy={busy}
+                    isDragging={isDraggingFiles}
                     onBrowse={async () => {
                       const paths = await api.selectPdfFiles(false)
                       await loadPdfForConvert(paths)
@@ -1464,7 +1556,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                             {convertPdfDoc.name}
                           </h3>
                           <p className="font-mono text-[11px] text-[var(--text-muted)]">
-                            {formatSize(convertPdfDoc.sizeBytes)} · {convertPdfDoc.pageCount} páginas
+                            {formatSize(convertPdfDoc.sizeBytes)} · {convertPdfDoc.pageCount} {t.pdf.settingsView.pagesCount.replace('{0}', '')}
                           </p>
                         </div>
                       </div>
@@ -1473,7 +1565,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                         onClick={() => setConvertPdfDoc(null)}
                         className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-rose-400"
                       >
-                        Cambiar PDF
+                        {t.pdf.changePdf}
                       </button>
                     </div>
 
@@ -1481,7 +1573,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                           <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                            Formato de Imagen
+                            {t.pdf.imgFormat}
                           </label>
                           <div className="mt-2 flex gap-2">
                             {(['jpg', 'png'] as const).map((fmt) => (
@@ -1503,13 +1595,13 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
 
                         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                           <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                            Resolución / Escala
+                            {t.pdf.resolutionScale}
                           </label>
                           <div className="mt-2 flex gap-2">
                             {(
                               [
-                                { s: 1, label: '1x Estándar' },
-                                { s: 2, label: '2x Alta Definición' }
+                                { s: 1, label: t.pdf.scale1x },
+                                { s: 2, label: t.pdf.scale2x }
                               ] as const
                             ).map((opt) => (
                               <button
@@ -1530,7 +1622,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
 
                         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5">
                           <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                            Páginas a exportar
+                            {t.pdf.exportPages}
                           </label>
                           <div className="mt-2 flex items-center gap-2">
                             <select
@@ -1541,10 +1633,10 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                               className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs text-[var(--text-primary)]"
                             >
                               <option value="all" className="bg-zinc-900">
-                                Todas ({convertPdfDoc.pageCount})
+                                {t.pdf.exportAll.replace('{0}', String(convertPdfDoc.pageCount))}
                               </option>
                               <option value="custom" className="bg-zinc-900">
-                                Rango
+                                {t.pdf.exportCustomRange}
                               </option>
                             </select>
                             {exportRangeMode === 'custom' && (
@@ -1568,10 +1660,10 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-xs font-bold text-[var(--text-primary)]">
-                                Numerar Páginas
+                                {t.pdf.numberPages}
                               </p>
                               <p className="text-[11px] text-[var(--text-muted)]">
-                                Inserta foliado limpio en cada página del PDF.
+                                {t.pdf.numberPagesDesc}
                               </p>
                             </div>
                             <Switch
@@ -1585,7 +1677,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                             <div className="grid grid-cols-2 gap-3 pt-2">
                               <div>
                                 <label className="block text-[11px] text-[var(--text-secondary)]">
-                                  Posición
+                                  {t.pdf.position}
                                 </label>
                                 <select
                                   value={pageNumberPosition}
@@ -1597,25 +1689,25 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                                   className="mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs text-[var(--text-primary)]"
                                 >
                                   <option value="bottom-right" className="bg-zinc-900">
-                                    Inferior Derecha
+                                    {t.pdf.posBottomRight}
                                   </option>
                                   <option value="bottom-center" className="bg-zinc-900">
-                                    Inferior Centro
+                                    {t.pdf.posBottomCenter}
                                   </option>
                                   <option value="bottom-left" className="bg-zinc-900">
-                                    Inferior Izquierda
+                                    {t.pdf.posBottomLeft}
                                   </option>
                                   <option value="top-right" className="bg-zinc-900">
-                                    Superior Derecha
+                                    {t.pdf.posTopRight}
                                   </option>
                                   <option value="top-center" className="bg-zinc-900">
-                                    Superior Centro
+                                    {t.pdf.posTopCenter}
                                   </option>
                                 </select>
                               </div>
                               <div>
                                 <label className="block text-[11px] text-[var(--text-secondary)]">
-                                  Formato
+                                  {t.pdf.numFormat}
                                 </label>
                                 <select
                                   value={pageNumberFormat}
@@ -1627,10 +1719,10 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                                   className="mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs text-[var(--text-primary)]"
                                 >
                                   <option value="page-of-total" className="bg-zinc-900">
-                                    Página X de Y
+                                    {t.pdf.numPageOfTotal}
                                   </option>
                                   <option value="simple" className="bg-zinc-900">
-                                    Solo número (1, 2, 3)
+                                    {t.pdf.numSimple}
                                   </option>
                                 </select>
                               </div>
@@ -1643,10 +1735,10 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-xs font-bold text-[var(--text-primary)]">
-                                Estampar Marca de Agua
+                                {t.pdf.watermark}
                               </p>
                               <p className="text-[11px] text-[var(--text-muted)]">
-                                Sello de texto diagonal o centrado sobre las páginas.
+                                {t.pdf.watermarkDesc}
                               </p>
                             </div>
                             <Switch
@@ -1660,7 +1752,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                             <div className="grid grid-cols-2 gap-3 pt-2">
                               <div className="col-span-2">
                                 <label className="block text-[11px] text-[var(--text-secondary)]">
-                                  Texto del sello
+                                  {t.pdf.stampText}
                                 </label>
                                 <input
                                   type="text"
@@ -1671,7 +1763,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                               </div>
                               <div>
                                 <label className="block text-[11px] text-[var(--text-secondary)]">
-                                  Disposición
+                                  {t.pdf.layout}
                                 </label>
                                 <select
                                   value={watermarkPosition}
@@ -1683,23 +1775,23 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                                   className="mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs text-[var(--text-primary)]"
                                 >
                                   <option value="diagonal" className="bg-zinc-900">
-                                    Diagonal 45°
+                                    {t.pdf.layoutDiagonal}
                                   </option>
                                   <option value="center" className="bg-zinc-900">
-                                    Horizontal Centrado
+                                    {t.pdf.layoutCenter}
                                   </option>
                                   <option value="header" className="bg-zinc-900">
-                                    Encabezado Superior
+                                    {t.pdf.layoutHeader}
                                   </option>
                                   <option value="footer" className="bg-zinc-900">
-                                    Pie de Página
+                                    {t.pdf.layoutFooter}
                                   </option>
                                 </select>
                               </div>
                               <div className="flex items-end gap-2">
                                 <div className="flex-1">
                                   <label className="block text-[11px] text-[var(--text-secondary)]">
-                                    Opacidad ({Math.round(watermarkOpacity * 100)}%)
+                                    {t.pdf.opacity.replace('{0}', String(Math.round(watermarkOpacity * 100)))}
                                   </label>
                                   <input
                                     type="range"
@@ -1731,11 +1823,11 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                         <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
                           <div className="flex items-center justify-between">
                             <p className="text-xs font-bold text-[var(--text-primary)]">
-                              Metadatos del Documento
+                              {t.pdf.docMetadata}
                             </p>
                             <div className="flex items-center gap-2">
                               <span className="text-[11px] text-[var(--text-muted)]">
-                                Purgar todos
+                                {t.pdf.purgeAll}
                               </span>
                               <Switch
                                 checked={stripAllMetadata}
@@ -1749,7 +1841,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                             <div className="space-y-2.5 pt-1">
                               <div>
                                 <label className="block text-[11px] text-[var(--text-secondary)]">
-                                  Título
+                                  {t.pdf.metaTitle}
                                 </label>
                                 <input
                                   type="text"
@@ -1760,7 +1852,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                               </div>
                               <div>
                                 <label className="block text-[11px] text-[var(--text-secondary)]">
-                                  Autor
+                                  {t.pdf.metaAuthor}
                                 </label>
                                 <input
                                   type="text"
@@ -1771,7 +1863,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                               </div>
                               <div>
                                 <label className="block text-[11px] text-[var(--text-secondary)]">
-                                  Asunto / Descripción
+                                  {t.pdf.metaSubject}
                                 </label>
                                 <input
                                   type="text"
@@ -1786,15 +1878,15 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
 
                         <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
                           <p className="text-xs font-bold text-[var(--text-primary)]">
-                            Seguridad y Contraseña (AES / qpdf)
+                            {t.pdf.securityTitle}
                           </p>
                           <p className="text-[11px] text-[var(--text-muted)]">
-                            Permite proteger con contraseña o desbloquear un PDF si conoces su clave.
+                            {t.pdf.securityDesc}
                           </p>
 
                           <div>
                             <label className="block text-[11px] text-[var(--text-secondary)]">
-                              Acción de seguridad
+                              {t.pdf.securityAction}
                             </label>
                             <select
                               value={securityAction}
@@ -1806,13 +1898,13 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                               className="mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs text-[var(--text-primary)]"
                             >
                               <option value="none" className="bg-zinc-900">
-                                Sin cambios de contraseña
+                                {t.pdf.secNone}
                               </option>
                               <option value="encrypt" className="bg-zinc-900">
-                                Proteger PDF con contraseña
+                                {t.pdf.secEncrypt}
                               </option>
                               <option value="decrypt" className="bg-zinc-900">
-                                Desbloquear PDF protegido
+                                {t.pdf.secDecrypt}
                               </option>
                             </select>
                           </div>
@@ -1820,13 +1912,13 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
                           {securityAction !== 'none' && (
                             <div>
                               <label className="block text-[11px] text-[var(--text-secondary)]">
-                                Contraseña del documento
+                                {t.pdf.password}
                               </label>
                               <input
                                 type="password"
                                 value={securityPassword}
                                 onChange={(e) => setSecurityPassword(e.target.value)}
-                                placeholder="Introduce la contraseña..."
+                                placeholder={t.pdf.passwordPlaceholder}
                                 className="mt-1 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs text-[var(--text-primary)]"
                               />
                             </div>

@@ -1,4 +1,5 @@
 import { Loader2, Play, Square, Trash2 } from 'lucide-react'
+import { useI18n } from '@panel/ui-kit'
 import type { Job } from '../../shared/types'
 import { formatBytes } from '../lib/format'
 
@@ -19,6 +20,7 @@ export function ActionPanel({
   onCancel,
   onClearCompleted
 }: ActionPanelProps): JSX.Element {
+  const { t } = useI18n()
   const pending = jobs.filter((j) => j.status === 'pending').length
   const done = jobs.filter((j) => j.status === 'done')
   const doneOriginal = done.reduce((acc, j) => acc + j.size, 0)
@@ -29,9 +31,9 @@ export function ActionPanel({
   return (
     <section className="panel space-y-4 p-4">
       <div className="grid grid-cols-3 gap-2 text-center">
-        <Stat label="En cola" value={String(pending)} />
-        <Stat label="Listos" value={String(done.length)} />
-        <Stat label="Ahorrado" value={done.length ? `${savedPct.toFixed(0)}%` : '—'} accent />
+        <Stat label={t.video.inQueue} value={String(pending)} />
+        <Stat label={t.video.ready} value={String(done.length)} />
+        <Stat label={t.video.saved} value={done.length ? `${savedPct.toFixed(0)}%` : '—'} accent />
       </div>
 
       {done.length > 0 && (
@@ -39,7 +41,7 @@ export function ActionPanel({
           {formatBytes(doneOriginal)} →{' '}
           <span className="text-[var(--text-primary)]">{formatBytes(doneCompressed)}</span> ·{' '}
           <span className="text-emerald-500 dark:text-emerald-400">
-            {formatBytes(saved)} liberados
+            {formatBytes(saved)} {t.video.freed}
           </span>
         </p>
       )}
@@ -57,7 +59,7 @@ export function ActionPanel({
           ) : (
             <Square className="h-4 w-4 fill-current" />
           )}
-          {stopping ? 'Cancelando…' : 'Cancelar proceso actual'}
+          {stopping ? t.video.canceling : t.video.cancelProcess}
         </button>
       ) : (
         <button
@@ -68,7 +70,7 @@ export function ActionPanel({
           className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-zinc-700/40 disabled:to-zinc-700/40 disabled:text-[var(--text-muted)] disabled:shadow-none"
         >
           <Play className="h-4 w-4 fill-current transition-transform group-hover:scale-110" />
-          Iniciar Compresión
+          {t.video.startCompression}
           {pending > 0 && (
             <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] tabular-nums">
               {pending}
@@ -84,7 +86,7 @@ export function ActionPanel({
         disabled={done.length === 0}
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:pointer-events-none disabled:opacity-40"
       >
-        <Trash2 className="h-3.5 w-3.5" /> Limpiar completados
+        <Trash2 className="h-3.5 w-3.5" /> {t.video.clearCompleted}
       </button>
     </section>
   )
@@ -114,4 +116,3 @@ function Stat({
     </div>
   )
 }
-

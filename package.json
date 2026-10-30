@@ -2,10 +2,9 @@
   "name": "panel-personal-monorepo",
   "productName": "Panel Personal Hub",
   "private": true,
-  "version": "1.1.0",
-  "description": "Ecosistema de escritorio modular estilo PowerToys / Raycast",
+  "version": "2.0.0",
+  "description": "Ecosistema de escritorio modular en Tauri v2 + Rust Cargo Workspaces",
   "author": "Albedo",
-  "main": "./apps/hub-principal/out/main/index.js",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -14,29 +13,25 @@
   "scripts": {
     "dev": "npm --workspace @panel/hub run dev",
     "build": "npm --workspace @panel/hub run build",
-    "start": "npm --workspace @panel/hub run start",
+    "tauri": "npm --workspace @panel/hub run tauri",
+    "tauri:dev": "npm --workspace @panel/hub run tauri:dev",
+    "tauri:build": "npm --workspace @panel/hub run tauri:build",
     "typecheck": "npm --workspace @panel/hub run typecheck",
-    "dist": "npm run typecheck && npm run build && electron-builder --win --x64"
+    "dist": "npm --workspace @panel/hub run dist"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "1.1.0",
     "@ffprobe-installer/ffprobe": "2.1.2",
-    "ffmpeg-static": "5.2.0",
-    "fluent-ffmpeg": "2.1.3",
-    "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^6.4.299",
-    "pdfkit": "^0.15.0"
+    "@tauri-apps/api": "^2.2.0",
+    "pdfjs-dist": "^6.4.299"
   },
   "devDependencies": {
-    "@types/fluent-ffmpeg": "2.1.27",
+    "@tauri-apps/cli": "^2.2.0",
     "@types/node": "22.10.1",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.4",
     "autoprefixer": "10.4.20",
-    "electron": "33.2.1",
-    "electron-builder": "25.1.8",
-    "electron-vite": "2.3.0",
     "lucide-react": "0.460.0",
     "postcss": "8.4.49",
     "react": "18.3.1",
@@ -44,62 +39,5 @@
     "tailwindcss": "3.4.15",
     "typescript": "5.6.3",
     "vite": "5.4.11"
-  },
-  "build": {
-    "appId": "com.panelpersonal.hub",
-    "productName": "Panel Personal Hub",
-    "directories": {
-      "output": "release",
-      "buildResources": "apps/hub-principal/build"
-    },
-    "files": [
-      "apps/hub-principal/out/**/*",
-      "apps/hub-principal/build/icon.png",
-      "apps/hub-principal/build/icon.ico",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "modules/mod-scanner/scripts",
-        "to": "scripts",
-        "filter": [
-          "**/*.ps1"
-        ]
-      },
-      {
-        "from": "modules/mod-optimizer/scripts",
-        "to": "scripts",
-        "filter": [
-          "**/*.ps1"
-        ]
-      },
-      {
-        "from": "apps/hub-principal/build/icon.png",
-        "to": "icon.png"
-      }
-    ],
-    "asarUnpack": [
-      "node_modules/@ffmpeg-installer/**",
-      "node_modules/@ffprobe-installer/**",
-      "node_modules/ffmpeg-static/**"
-    ],
-    "win": {
-      "icon": "apps/hub-principal/build/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Panel Personal Hub"
-    }
   }
 }

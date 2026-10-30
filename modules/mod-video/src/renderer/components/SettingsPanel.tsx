@@ -9,7 +9,7 @@ import {
   Zap
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Switch } from '@panel/ui-kit'
+import { Switch, useI18n } from '@panel/ui-kit'
 import {
   LEVEL_QUALITY,
   type CompressionLevel,
@@ -49,6 +49,7 @@ export function SettingsPanel({
   onChange,
   onPickFolder
 }: SettingsPanelProps): JSX.Element {
+  const { t } = useI18n()
   const qualityLabel = settings.engine === 'nvenc' ? 'CQ' : 'CRF'
   const sameFolder = settings.outputMode === 'same'
 
@@ -59,7 +60,7 @@ export function SettingsPanel({
     >
       {/* Destino */}
       <div>
-        <p className="section-label">Destino</p>
+        <p className="section-label">{t.video.outputFolder}</p>
         <div className="space-y-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
           <label
             htmlFor="toggle-same-folder"
@@ -67,7 +68,7 @@ export function SettingsPanel({
           >
             <span className="flex items-center gap-2 text-[13px] text-[var(--text-primary)]">
               <HardDrive className="h-4 w-4 text-[var(--text-muted)]" />
-              Misma carpeta que el original
+              {t.video.sameFolder}
             </span>
             <Switch
               id="toggle-same-folder"
@@ -78,8 +79,7 @@ export function SettingsPanel({
           </label>
           {sameFolder ? (
             <p className="text-[11px] text-[var(--text-muted)]">
-              Se guardará como{' '}
-              <span className="font-mono text-[var(--text-secondary)]">nombre_compressed.mp4</span>
+              {t.video.suffixNote}
             </p>
           ) : (
             <button
@@ -96,7 +96,7 @@ export function SettingsPanel({
                 }`}
                 title={settings.outputDir ?? ''}
               >
-                {settings.outputDir ?? 'Elegir carpeta de destino…'}
+                {settings.outputDir ?? t.video.customFolder}
               </span>
             </button>
           )}
@@ -105,11 +105,12 @@ export function SettingsPanel({
 
       {/* Motor */}
       <div>
-        <p className="section-label">Motor de compresión</p>
+        <p className="section-label">{t.video.engineLabel}</p>
         <div className="space-y-2">
-          {ENGINES.map(({ id, title, desc, icon: Icon }) => {
+          {ENGINES.map(({ id, title, icon: Icon }) => {
             const active = settings.engine === id
             const unavailable = id === 'nvenc' && system != null && !system.nvencAvailable
+            const desc = id === 'nvenc' ? t.video.nvencDesc : t.video.x264Desc
             return (
               <button
                 key={id}
@@ -134,17 +135,17 @@ export function SettingsPanel({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 text-[13px] font-medium text-[var(--text-primary)]">
-                    {title}
+                    {id === 'nvenc' ? t.video.engineNvencTitle : t.video.engineX264Title}
                     {id === 'nvenc' && !unavailable && (
                       <span className="rounded bg-violet-500/20 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-violet-500 dark:text-violet-200">
-                        Por defecto
+                        Default
                       </span>
                     )}
                   </p>
                   <p className="text-[11px] text-[var(--text-muted)]">{desc}</p>
                   {unavailable && (
                     <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-500">
-                      <AlertTriangle className="h-3 w-3" /> No se detectó una GPU NVIDIA compatible
+                      <AlertTriangle className="h-3 w-3" /> {t.video.noGpuWarning}
                     </p>
                   )}
                 </div>
@@ -163,10 +164,23 @@ export function SettingsPanel({
 
       {/* Nivel */}
       <div>
-        <p className="section-label">Nivel de compresión</p>
+        <p className="section-label">{t.video.levelLabel}</p>
         <div className="space-y-1.5">
-          {LEVELS.map(({ id, title, desc, tag }) => {
+          {LEVELS.map(({ id }) => {
             const active = settings.level === id
+            const localizedTitle =
+              id === 'high'
+                ? t.video.highQuality
+                : id === 'balanced'
+                  ? t.video.balanced
+                  : t.video.maxCompression
+            const localizedDesc =
+              id === 'high'
+                ? t.video.highQualityDesc
+                : id === 'balanced'
+                  ? t.video.balancedDesc
+                  : t.video.maxCompressionDesc
+            const tag = id === 'balanced' ? t.video.recommended : undefined
             return (
               <button
                 key={id}
@@ -187,14 +201,14 @@ export function SettingsPanel({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-x-2 text-[13px] font-medium text-[var(--text-primary)]">
-                    {title}
+                    {localizedTitle}
                     {tag && (
                       <span className="text-[10px] font-medium text-fuchsia-500 dark:text-fuchsia-300">
                         {tag}
                       </span>
                     )}
                   </p>
-                  <p className="text-[11px] text-[var(--text-muted)]">{desc}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">{localizedDesc}</p>
                 </div>
                 <span
                   className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
@@ -219,9 +233,9 @@ export function SettingsPanel({
         <span className="flex items-start gap-2">
           <MonitorPlay className="mt-0.5 h-4 w-4 text-[var(--text-muted)]" />
           <span>
-            <span className="block text-[13px] text-[var(--text-primary)]">Limitar a 1080p</span>
+            <span className="block text-[13px] text-[var(--text-primary)]">{t.video.limit1080p}</span>
             <span className="block text-[11px] text-[var(--text-muted)]">
-              Reduce 4K/1440p a 1080p
+              {t.video.limit1080pDesc}
             </span>
           </span>
         </span>

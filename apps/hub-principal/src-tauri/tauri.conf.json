@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Panel Personal Hub",
+  "version": "2.0.0",
+  "identifier": "com.panelpersonal.hub",
+  "build": {
+    "frontendDist": "../out/renderer",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev:vite",
+    "beforeBuildCommand": "npm run build:vite"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Panel Personal Hub",
+        "width": 1320,
+        "height": 840,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "shadow": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' blob: asset: https://asset.localhost; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' asset: https://asset.localhost data: blob:;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "resources": {
+      "../../../modules/mod-scanner/scripts/*.ps1": "scripts/mod-scanner/",
+      "../../../modules/mod-optimizer/scripts/*.ps1": "scripts/mod-optimizer/",
+      "icons/icon.png": "icon.png"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "languages": [
+          "Spanish",
+          "English",
+          "French",
+          "SimpChinese"
+        ],
+        "displayLanguageSelector": true
+      }
+    }
+  }
+}
+

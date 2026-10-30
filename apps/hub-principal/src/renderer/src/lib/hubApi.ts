@@ -1,9 +1,12 @@
-import type {
-  BrandingConfig,
-  DependencyStatus,
-  HubAPI,
-  HubAppSettings,
-  ModuleStateSnapshot
+import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import {
+  HUB_IPC,
+  type BrandingConfig,
+  type DependencyStatus,
+  type HubAPI,
+  type HubAppSettings,
+  type ModuleStateSnapshot
 } from '@panel/core-sdk'
 
 declare global {
@@ -12,8 +15,12 @@ declare global {
   }
   interface Window {
     panelApi?: PanelWindowBridge
+    __TAURI_INTERNALS__?: unknown
   }
 }
+
+export const isTauriRuntime = (): boolean =>
+  typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__)
 
 let mockAppSettings: HubAppSettings = {
   closeToTray: true,
@@ -56,10 +63,33 @@ const mockStates: Record<string, ModuleStateSnapshot> = {
         name: 'Windows WIA / PowerShell STA Bridge',
         description: 'Subproceso efímero bajo demanda para escáneres USB y WiFi',
         ready: true
-      },
+      }
+    ]
+  },
+  'mod-optimizer': {
+    id: 'mod-optimizer',
+    enabled: true,
+    running: false,
+    statusText: 'Listo (0 MB en reposo)',
+    dependenciesReady: true,
+    dependencies: [
       {
-        name: 'Motor PDFKit Multipágina',
-        description: 'Generador de documentos PDF A4 / Carta',
+        name: 'PowerShell System Optimizer',
+        description: 'Ejecutor aislado sin consola para telemetría y caché',
+        ready: true
+      }
+    ]
+  },
+  'mod-pdf': {
+    id: 'mod-pdf',
+    enabled: true,
+    running: false,
+    statusText: 'Listo (0 MB en reposo)',
+    dependenciesReady: true,
+    dependencies: [
+      {
+        name: 'Motor PDF Nativo (Rust + PDF.js)',
+        description: 'Manipulación de documentos PDF e inspección local',
         ready: true
       }
     ]
@@ -68,10 +98,82 @@ const mockStates: Record<string, ModuleStateSnapshot> = {
 
 let stateListener: ((state: ModuleStateSnapshot) => void) | null = null
 
+const tauriHubApi: HubAPI = {
+  minimizeWindow: () => {
+    void invoke('hub_window_minimize')
+  },
+  maximizeWindow: () => {
+    void invoke('hub_window_maximize')
+  },
+  closeWindow: () => {
+    void invoke('hub_window_close')
+  },
+  isWindowMaximized: async (): Promise<boolean> => {
+    return invoke<boolean>('hub_window_is_maximized')
+  },
+  setNativeTheme: (resolvedTheme: 'dark' | 'light') => {
+    void invoke('hub_theme_set_native', { resolvedTheme })
+  },
+  async getAppSettings(): Promise<HubAppSettings> {
+    return invoke<HubAppSettings>('hub_app_get_settings')
+  },
+  async setBranding(branding: BrandingConfig): Promise<HubAppSettings> {
+    return invoke<HubAppSettings>('hub_app_set_branding', { branding })
+  },
+  async setCloseToTray(closeToTray: boolean): Promise<HubAppSettings> {
+    return invoke<HubAppSettings>('hub_app_set_close_to_tray', { closeToTray })
+  },
+  onTrayNavigate(callback: (route: string) => void): () => void {
+    let unlisten: UnlistenFn | null = null
+    let active = true
+
+    void listen<string>(HUB_IPC.trayNavigateToModule, (event) => {
+      if (active) callback(event.payload)
+    }).then((fn) => {
+      if (!active) fn()
+      else unlisten = fn
+    })
+
+    return () => {
+      active = false
+      unlisten?.()
+    }
+  },
+  async getModuleStates(): Promise<Record<string, ModuleStateSnapshot>> {
+    return invoke<Record<string, ModuleStateSnapshot>>('hub_modules_get_states')
+  },
+  async setModuleEnabled(moduleId: string, enabled: boolean): Promise<ModuleStateSnapshot> {
+    return invoke<ModuleStateSnapshot>('hub_modules_set_enabled', { moduleId, enabled })
+  },
+  async checkModuleDependencies(moduleId: string): Promise<DependencyStatus[]> {
+    return invoke<DependencyStatus[]>('hub_modules_check_deps', { moduleId })
+  },
+  async stopModuleProcesses(moduleId: string): Promise<boolean> {
+    return invoke<boolean>('hub_modules_stop_processes', { moduleId })
+  },
+  onModuleStateChange(callback: (state: ModuleStateSnapshot) => void): () => void {
+    let unlisten: UnlistenFn | null = null
+    let active = true
+
+    void listen<ModuleStateSnapshot>(HUB_IPC.moduleStateChanged, (event) => {
+      if (active) callback(event.payload)
+    }).then((fn) => {
+      if (!active) fn()
+      else unlisten = fn
+    })
+
+    return () => {
+      active = false
+      unlisten?.()
+    }
+  }
+}
+
 const browserMockHubApi: HubAPI = {
   minimizeWindow: () => {},
   maximizeWindow: () => {},
   closeWindow: () => {},
+  isWindowMaximized: async () => false,
   setNativeTheme: () => {},
   async getAppSettings(): Promise<HubAppSettings> {
     return mockAppSettings
@@ -132,6 +234,9 @@ const browserMockHubApi: HubAPI = {
 }
 
 export function getHubApi(): HubAPI {
+  if (isTauriRuntime()) {
+    return tauriHubApi
+  }
   if (typeof window !== 'undefined' && window.panelApi?.hub) {
     return window.panelApi.hub
   }

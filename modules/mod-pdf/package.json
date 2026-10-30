@@ -7,7 +7,6 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./backend": "./src/backend/index.ts",
     "./shared": "./src/shared/types.ts"
   },
   "dependencies": {

@@ -68,6 +68,11 @@ body {
 .app-no-drag {
   -webkit-app-region: no-drag;
 }
+.draggable-card {
+  -webkit-user-drag: element;
+  user-select: none;
+  touch-action: none;
+}
 
 .hub-bg {
   background:

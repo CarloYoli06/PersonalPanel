@@ -1,18 +1,20 @@
 {
   "name": "@panel/hub",
   "productName": "Panel Personal Hub",
-  "version": "1.1.0",
-  "description": "Hub modular ultraligero de escritorio (FileDiet + Escaner Albedo + PC Optimizer + PDF Studio)",
+  "version": "2.0.0",
+  "description": "Hub modular ultraligero de escritorio en Tauri v2 (FileDiet + Escaner Albedo + PC Optimizer + PDF Studio)",
   "author": "Albedo",
-  "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "start": "electron-vite preview",
-    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
-    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "dist": "npm run typecheck && electron-vite build && electron-builder --win --x64"
+    "dev:vite": "vite --config vite.config.ts",
+    "build:vite": "vite build --config vite.config.ts",
+    "preview:vite": "vite preview --config vite.config.ts",
+    "tauri": "node ../../scripts/run-tauri.cjs",
+    "tauri:dev": "node ../../scripts/run-tauri.cjs dev",
+    "tauri:build": "npm run typecheck && node ../../scripts/run-tauri.cjs build",
+    "dev": "npm run tauri:dev",
+    "build": "npm run tauri:build",
+    "typecheck": "tsc --noEmit -p tsconfig.web.json",
+    "dist": "npm run tauri:build"
   },
   "dependencies": {
     "@panel/core-sdk": "*",
@@ -20,52 +22,12 @@
     "@panel/mod-video": "*",
     "@panel/mod-scanner": "*",
     "@panel/mod-optimizer": "*",
-    "@panel/mod-pdf": "*"
+    "@panel/mod-pdf": "*",
+    "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-shell": "^2.2.0"
   },
-  "build": {
-    "appId": "com.panelpersonal.hub",
-    "productName": "Panel Personal Hub",
-    "directories": {
-      "output": "../../release",
-      "buildResources": "build"
-    },
-    "files": [
-      "out/**/*",
-      "build/icon.png",
-      "build/icon.ico",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "../../modules/mod-scanner/scripts",
-        "to": "scripts",
-        "filter": ["**/*.ps1"]
-      },
-      {
-        "from": "build/icon.png",
-        "to": "icon.png"
-      }
-    ],
-    "asarUnpack": [
-      "node_modules/@ffmpeg-installer/**",
-      "node_modules/@ffprobe-installer/**",
-      "node_modules/ffmpeg-static/**"
-    ],
-    "win": {
-      "icon": "build/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Panel Personal Hub"
-    }
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0"
   }
 }

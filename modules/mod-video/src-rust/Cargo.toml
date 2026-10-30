@@ -1,0 +1,15 @@
+[package]
+name = "panel-mod-video"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Backend en Rust para el módulo FileDiet (análisis con ffprobe, codificación asíncrona con FFmpeg NVENC/x264 y streaming de progreso)"
+
+[dependencies]
+tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+panel-core-sdk = { path = "../../../packages/core-sdk/src-rust" }
+

@@ -1,13 +1,17 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Clapperboard,
+  Copy,
   FileText,
   LayoutGrid,
   Loader2,
+  Minus,
   ScanLine,
   Settings,
   Sparkles,
-  Wrench
+  Square,
+  Wrench,
+  X
 } from 'lucide-react'
 import type {
   BrandingConfig,
@@ -16,7 +20,7 @@ import type {
   ModuleManifest,
   ModuleStateSnapshot
 } from '@panel/core-sdk'
-import { GlobalToast, ThemeProvider, ThemeToggle } from '@panel/ui-kit'
+import { GlobalToast, I18nProvider, ThemeProvider, ThemeToggle, useI18n } from '@panel/ui-kit'
 import { MODULE_REGISTRY, getModuleById } from './registry'
 import { getHubApi } from './lib/hubApi'
 import { buildBrandingPayload } from './lib/iconGenerator'
@@ -43,13 +47,34 @@ const DEFAULT_SETTINGS: HubAppSettings = {
 }
 
 function HubShell(): JSX.Element {
+  const { t } = useI18n()
   const hubApi = useMemo(() => getHubApi(), [])
   const [route, setRoute] = useState<ActiveRoute>('dashboard')
   const [moduleStates, setModuleStates] = useState<Record<string, ModuleStateSnapshot>>({})
   const [appSettings, setAppSettings] = useState<HubAppSettings>(DEFAULT_SETTINGS)
   const [toast, setToast] = useState<string | null>(null)
+  const [isMaximized, setIsMaximized] = useState(false)
   const toastTimer = useRef<number>()
   const prevModuleRef = useRef<string | null>(null)
+
+  const handleToggleMaximize = useCallback(async () => {
+    hubApi.maximizeWindow()
+    if (hubApi.isWindowMaximized) {
+      setTimeout(async () => {
+        const next = await hubApi.isWindowMaximized?.()
+        setIsMaximized(Boolean(next))
+      }, 50)
+    }
+  }, [hubApi])
+
+  useEffect(() => {
+    hubApi.isWindowMaximized?.().then((max) => setIsMaximized(Boolean(max))).catch(() => {})
+    const handleResize = () => {
+      hubApi.isWindowMaximized?.().then((max) => setIsMaximized(Boolean(max))).catch(() => {})
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [hubApi])
 
   const notify = useCallback((msg: string) => {
     window.clearTimeout(toastTimer.current)
@@ -66,9 +91,17 @@ function HubShell(): JSX.Element {
 
     hubApi.getAppSettings().then((cfg) => {
       if (!mounted) return
-      setAppSettings(cfg)
-      if (cfg.branding.mode === 'initials' && !cfg.branding.dataUrl) {
-        const rebuilt = buildBrandingPayload('initials', cfg.branding.initials, cfg.branding.color)
+      const normalizedMode = cfg.branding?.mode === 'initials' ? 'initials' : 'logo'
+      const resolved: HubAppSettings = {
+        ...cfg,
+        branding: {
+          ...cfg.branding,
+          mode: normalizedMode
+        }
+      }
+      setAppSettings(resolved)
+      if (resolved.branding.mode === 'initials' && !resolved.branding.dataUrl) {
+        const rebuilt = buildBrandingPayload('initials', resolved.branding.initials, resolved.branding.color)
         void hubApi.setBranding(rebuilt).then((updated) => {
           if (mounted) setAppSettings(updated)
         })
@@ -250,15 +283,18 @@ function HubShell(): JSX.Element {
 
   return (
     <div className="hub-bg flex h-full flex-col overflow-hidden text-[var(--text-primary)]">
-      {/* Barra superior (Titlebar + Navegación rápida estilo Raycast / PowerToys) */}
-      <header className="app-drag flex h-11 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] pl-3.5 pr-[145px] backdrop-blur-xl">
+      {/* Barra superior (Titlebar personalizada + Navegación rápida estilo Raycast / PowerToys) */}
+      <header
+        data-tauri-drag-region
+        className="app-drag flex h-11 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] pl-3.5 pr-2 backdrop-blur-xl select-none"
+      >
         {/* Identidad del Hub (LogoAlbedo o Iniciales dinámicas) */}
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setRoute('dashboard')}
             className="app-no-drag flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-[var(--bg-card-hover)]"
-            title="Ir al Panel Principal"
+            title={t.nav.goToHome}
           >
             {appSettings.branding.mode === 'initials' ? (
               <div
@@ -275,7 +311,7 @@ function HubShell(): JSX.Element {
               />
             )}
             <span className="text-[13px] font-bold tracking-tight text-[var(--text-primary)]">
-              Panel Personal
+              {t.common.appTitle}
             </span>
           </button>
 
@@ -293,7 +329,7 @@ function HubShell(): JSX.Element {
               }`}
             >
               <LayoutGrid className="h-3.5 w-3.5 text-violet-400" />
-              Inicio (Hub)
+              {t.nav.home}
             </button>
 
             {enabledModules.map((mod) => {
@@ -331,7 +367,10 @@ function HubShell(): JSX.Element {
                   <span className={iconColor}>
                     <NavIcon icon={mod.icon} />
                   </span>
-                  <span>{mod.name.split('·')[0].trim()}</span>
+                  <span>
+                    {t.modules[mod.id as keyof typeof t.modules]?.shortName ||
+                      mod.name.split('·')[0].trim()}
+                  </span>
                   {isRunning && (
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
                   )}
@@ -341,14 +380,14 @@ function HubShell(): JSX.Element {
           </nav>
         </div>
 
-        {/* Acciones derechas: Toggle de tema rápido + Configuración */}
-        <div className="app-no-drag flex items-center gap-2">
+        {/* Acciones derechas: Toggle de tema rápido + Configuración + Botones de Control de Ventana */}
+        <div className="app-no-drag flex items-center gap-1.5">
           <ThemeToggle compact />
 
           <button
             type="button"
             onClick={() => setRoute('settings')}
-            title="Configuración, Icono y Bandeja del Sistema"
+            title={t.settings.title}
             className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${
               route === 'settings'
                 ? 'border-violet-500/40 bg-violet-500/15 text-[var(--text-primary)]'
@@ -356,8 +395,42 @@ function HubShell(): JSX.Element {
             }`}
           >
             <Settings className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Ajustes</span>
+            <span className="hidden md:inline">{t.nav.settings}</span>
           </button>
+
+          <span className="mx-1 h-4 w-px bg-[var(--border-subtle)]" />
+
+          {/* Botones de Control de Ventana Propios (Frameless Window) */}
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => hubApi.minimizeWindow()}
+              className="inline-flex h-7 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+              title={t.common.minimize}
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleMaximize}
+              className="inline-flex h-7 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
+              title={isMaximized ? t.common.restore : t.common.maximize}
+            >
+              {isMaximized ? (
+                <Copy className="h-3 w-3" />
+              ) : (
+                <Square className="h-3 w-3" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => hubApi.closeWindow()}
+              className="inline-flex h-7 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-rose-600 hover:text-white"
+              title={t.common.close}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -418,8 +491,10 @@ export default function App(): JSX.Element {
   const hubApi = useMemo(() => getHubApi(), [])
 
   return (
-    <ThemeProvider onResolvedChange={(resolved) => hubApi.setNativeTheme(resolved)}>
-      <HubShell />
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider onResolvedChange={(resolved) => hubApi.setNativeTheme(resolved)}>
+        <HubShell />
+      </ThemeProvider>
+    </I18nProvider>
   )
 }

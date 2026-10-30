@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { AlertTriangle, Cpu, Zap } from 'lucide-react'
 import type { ModuleViewProps } from '@panel/core-sdk'
-import { GlobalToast } from '@panel/ui-kit'
+import { GlobalToast, useI18n } from '@panel/ui-kit'
 import type {
   CompressionSettings,
   Job,
@@ -57,6 +57,7 @@ function jobFromProbe(result: ProbeResult): Job {
 }
 
 export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+  const { t } = useI18n()
   const api = useMemo(() => getVideoApi(), [])
 
   const [jobs, setJobsState] = useState<Job[]>([])
@@ -154,6 +155,53 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
     const paths = await api.selectFiles()
     if (paths.length) await addPaths(paths)
   }, [api, addPaths])
+
+  // Escuchar eventos nativos de arrastre de archivos en Windows (Tauri v2 drag-drop)
+  useEffect(() => {
+    let unlisten: (() => void) | undefined
+    let isMounted = true
+
+    if (
+      typeof window !== 'undefined' &&
+      Boolean((window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__)
+    ) {
+      import('@tauri-apps/api/webview')
+        .then(({ getCurrentWebview }) => {
+          if (!isMounted) return
+          getCurrentWebview()
+            .onDragDropEvent((event) => {
+              if (!isMounted) return
+              if (event.payload.type === 'enter' || event.payload.type === 'over') {
+                setIsDragging(true)
+              } else if (event.payload.type === 'leave') {
+                setIsDragging(false)
+              } else if (event.payload.type === 'drop') {
+                setIsDragging(false)
+                const droppedPaths = event.payload.paths
+                if (droppedPaths && droppedPaths.length > 0) {
+                  void addPaths(droppedPaths)
+                }
+              }
+            })
+            .then((fn) => {
+              if (isMounted) {
+                unlisten = fn
+              } else {
+                fn()
+              }
+            })
+            .catch((err) => {
+              console.error('Error onDragDropEvent in VideoModuleView:', err)
+            })
+        })
+        .catch(() => {})
+    }
+
+    return () => {
+      isMounted = false
+      unlisten?.()
+    }
+  }, [addPaths])
 
   const hasFiles = (e: DragEvent): boolean => Array.from(e.dataTransfer.types).includes('Files')
 
@@ -290,28 +338,28 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
       <div className="flex shrink-0 items-center justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-2.5 backdrop-blur-xl">
         <div>
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-            FileDiet · Optimizador de Video por Lotes
+            {t.video.title}
           </h2>
           <p className="text-xs text-[var(--text-muted)]">
-            Codificación H.264 aislada bajo demanda (FFmpeg + NVENC / x264)
+            {t.video.subtitle}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {!isElectronVideo && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-500 ring-1 ring-amber-500/30">
-              <AlertTriangle className="h-3 w-3" /> Simulación Web
+              <AlertTriangle className="h-3 w-3" /> {t.video.webSimulation}
             </span>
           )}
           {system == null ? (
-            <span className="text-[11px] text-[var(--text-muted)]">Verificando hardware…</span>
+            <span className="text-[11px] text-[var(--text-muted)]">{t.video.checkingHardware}</span>
           ) : system.nvencAvailable ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-500 dark:text-emerald-300 ring-1 ring-inset ring-emerald-500/25">
-              <Zap className="h-3 w-3" /> GPU NVENC listo
+              <Zap className="h-3 w-3" /> {t.video.gpuReady}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--text-secondary)] ring-1 ring-inset ring-[var(--border-subtle)]">
-              <Cpu className="h-3 w-3" /> Motor CPU x264
+              <Cpu className="h-3 w-3" /> {t.video.cpuEngine}
             </span>
           )}
         </div>

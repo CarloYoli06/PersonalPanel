@@ -1,4 +1,5 @@
 import { FolderOpen, Loader2, UploadCloud } from 'lucide-react'
+import { useI18n } from '@panel/ui-kit'
 
 interface DropZoneProps {
   compact: boolean
@@ -8,6 +9,7 @@ interface DropZoneProps {
 }
 
 export function DropZone({ compact, isDragging, busy, onBrowse }: DropZoneProps): JSX.Element {
+  const { t } = useI18n()
   const base =
     'group relative flex w-full items-center overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300'
   const state = isDragging
@@ -33,17 +35,17 @@ export function DropZone({ compact, isDragging, busy, onBrowse }: DropZoneProps)
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-[var(--text-primary)]">
             {isDragging
-              ? 'Suelta para añadir a la cola'
+              ? t.video.dropzoneActiveCompact
               : busy
-                ? 'Analizando videos…'
-                : 'Arrastra más videos aquí'}
+                ? t.common.loading
+                : t.video.dropzoneCompactPrompt}
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            MP4, MKV, MOV o AVI · cada archivo se comprime por separado
+            {t.video.dropzoneSubFormat}
           </p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition group-hover:bg-[var(--bg-card-hover)] group-hover:text-[var(--text-primary)]">
-          <FolderOpen className="h-3.5 w-3.5" /> Examinar
+          <FolderOpen className="h-3.5 w-3.5" /> {t.common.browse}
         </span>
       </button>
     )
@@ -70,15 +72,19 @@ export function DropZone({ compact, isDragging, busy, onBrowse }: DropZoneProps)
       </div>
       <div className="relative text-center">
         <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-          {isDragging ? 'Suelta tus videos' : busy ? 'Analizando videos…' : 'Arrastra tus videos aquí'}
+          {isDragging
+            ? t.video.dropzoneActivePrompt
+            : busy
+              ? t.common.loading
+              : t.video.dropzoneTitle}
         </h1>
         <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-          Reduce archivos de ~1 GB a ~200–300 MB sin pérdida visible con aceleración NVENC o x264.
+          {t.video.dropzoneSubtitle}
         </p>
       </div>
       <div className="relative flex items-center gap-3">
         <span className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition group-hover:bg-[var(--bg-card-hover)]">
-          <FolderOpen className="h-4 w-4 text-violet-400" /> Seleccionar archivos
+          <FolderOpen className="h-4 w-4 text-violet-400" /> {t.common.browse}
         </span>
       </div>
       <div className="relative flex gap-2">

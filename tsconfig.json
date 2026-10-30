@@ -5,14 +5,27 @@
     "types": ["node"]
   },
   "include": [
-    "apps/hub-principal/electron.vite.config.ts",
-    "apps/hub-principal/src/**/*",
-    "packages/core-sdk/src/**/*",
+    "apps/hub-principal/vite.config.ts",
+    "apps/hub-principal/src/renderer/src/**/*",
+    "packages/core-sdk/src/index.ts",
+    "packages/core-sdk/src/manifest.ts",
+    "packages/core-sdk/src/ipc-contract.ts",
     "packages/ui-kit/src/**/*",
-    "modules/mod-video/src/**/*",
-    "modules/mod-scanner/src/**/*",
-    "modules/mod-optimizer/src/**/*",
-    "modules/mod-pdf/src/**/*"
+    "modules/mod-video/src/index.ts",
+    "modules/mod-video/src/manifest.ts",
+    "modules/mod-video/src/shared/**/*",
+    "modules/mod-video/src/renderer/**/*",
+    "modules/mod-scanner/src/index.ts",
+    "modules/mod-scanner/src/manifest.ts",
+    "modules/mod-scanner/src/shared/**/*",
+    "modules/mod-scanner/src/renderer/**/*",
+    "modules/mod-optimizer/src/index.ts",
+    "modules/mod-optimizer/src/manifest.ts",
+    "modules/mod-optimizer/src/shared/**/*",
+    "modules/mod-optimizer/src/renderer/**/*",
+    "modules/mod-pdf/src/index.ts",
+    "modules/mod-pdf/src/manifest.ts",
+    "modules/mod-pdf/src/shared/**/*",
+    "modules/mod-pdf/src/renderer/**/*"
   ]
 }
-

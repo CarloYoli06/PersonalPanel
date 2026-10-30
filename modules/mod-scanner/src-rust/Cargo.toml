@@ -1,0 +1,18 @@
+[package]
+name = "panel-mod-scanner"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Backend en Rust para el módulo Escaner Albedo (puente WIA PowerShell STA y generador PDF multipágina con lopdf)"
+
+[dependencies]
+tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+base64 = { workspace = true }
+image = { workspace = true }
+lopdf = { workspace = true }
+panel-core-sdk = { path = "../../../packages/core-sdk/src-rust" }
+

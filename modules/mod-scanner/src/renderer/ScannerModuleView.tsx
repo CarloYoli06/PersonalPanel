@@ -18,12 +18,13 @@ import {
   ZoomOut
 } from 'lucide-react'
 import type { ModuleViewProps } from '@panel/core-sdk'
-import { GlobalToast } from '@panel/ui-kit'
+import { GlobalToast, useI18n } from '@panel/ui-kit'
 import type { ScannedPage } from '../shared/types'
 import { ImageEditor, type CropRect } from './lib/imageEditor'
 import { getScannerApi } from './lib/scannerApi'
 
 export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+  const { t } = useI18n()
   const api = useMemo(() => getScannerApi(), [])
 
   // Estado del escáner y páginas
@@ -357,20 +358,20 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
       {/* Sidebar Izquierdo: Escáner y Páginas */}
       <aside className="panel flex w-[235px] shrink-0 flex-col overflow-hidden">
         <div className="border-b border-[var(--border-subtle)] p-3.5">
-          <p className="section-label">Escáner WIA</p>
+          <p className="section-label">{t.scanner.deviceSection}</p>
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-2.5">
             <p className="truncate text-xs font-semibold text-[var(--text-primary)]">
               {savedDevice.name || '—'}
             </p>
             <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-              {savedDevice.id ? 'Escáner recordado ✓' : 'Pulsa Escanear para elegir'}
+              {savedDevice.id ? t.scanner.remembered : t.scanner.clickToChoose}
             </p>
             <button
               type="button"
               onClick={() => void handleResetScanner()}
               className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]"
             >
-              <RefreshCw className="h-3 w-3" /> Cambiar escáner
+              <RefreshCw className="h-3 w-3" /> {t.scanner.changeScanner}
             </button>
           </div>
 
@@ -382,14 +383,14 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
                   : 'bg-amber-400'
               }`}
             />
-            <span>{savedDevice.id ? 'Listo para escanear' : 'Selección automática al iniciar'}</span>
+            <span>{savedDevice.id ? t.scanner.readyToScan : t.scanner.autoSelection}</span>
           </div>
         </div>
 
         {/* Lista de páginas */}
         <div className="flex min-h-0 flex-1 flex-col p-3.5">
           <div className="mb-2 flex items-center justify-between">
-            <p className="section-label !mb-0">Páginas</p>
+            <p className="section-label !mb-0">{t.scanner.pages}</p>
             <span className="rounded-full bg-[var(--bg-card)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
               {pages.length}
             </span>
@@ -397,7 +398,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
 
           {pages.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] p-4 text-center text-xs text-[var(--text-muted)]">
-              No hay páginas escaneadas. Pulsa <strong className="mx-1 text-[var(--text-secondary)]">Escanear</strong> para comenzar.
+              {t.scanner.noPages}
             </div>
           ) : (
             <div className="flex-1 space-y-2 overflow-y-auto pr-1">
@@ -415,7 +416,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
                   >
                     <img
                       src={p.editedBase64 || p.base64}
-                      alt={`Página ${idx + 1}`}
+                      alt={`#${idx + 1}`}
                       className="h-full w-full object-cover"
                     />
                     <span className="absolute bottom-1.5 left-1.5 rounded bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold text-white">
@@ -428,7 +429,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
                         void deletePage(idx)
                       }}
                       className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/90 text-white opacity-0 transition group-hover:opacity-100"
-                      title="Eliminar página"
+                      title={t.scanner.discardEdits}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -447,7 +448,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
             onClick={clearAllPages}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:pointer-events-none disabled:opacity-40"
           >
-            <Trash2 className="h-3.5 w-3.5" /> Limpiar todo
+            <Trash2 className="h-3.5 w-3.5" /> {t.scanner.clearAll}
           </button>
 
           <button
@@ -457,17 +458,17 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition hover:brightness-110 disabled:opacity-50"
           >
             <ScanLine className={`h-4 w-4 ${scanning ? 'animate-pulse' : ''}`} />
-            {scanning ? 'Escaneando…' : 'Escanear'}
+            {scanning ? t.scanner.scanning : t.scanner.scan}
           </button>
 
           <button
             type="button"
             disabled={scanning}
             onClick={() => void doScan(true)}
-            title="Abre el selector nativo de Windows (ideal para escáneres WiFi/red)"
+            title={t.scanner.nativeWifi}
             className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs font-medium text-cyan-600 dark:text-cyan-300 transition hover:bg-cyan-500/15 disabled:opacity-40"
           >
-            <Wifi className="h-3.5 w-3.5" /> Diálogo nativo (WiFi)
+            <Wifi className="h-3.5 w-3.5" /> {t.scanner.nativeWifi}
           </button>
         </div>
       </aside>
@@ -486,7 +487,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
                 : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)]'
             }`}
           >
-            <Crop className="h-3.5 w-3.5" /> Recortar
+            <Crop className="h-3.5 w-3.5" /> {t.scanner.crop}
           </button>
 
           <button
@@ -495,7 +496,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
             onClick={() => triggerAutoCrop()}
             className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:opacity-35"
           >
-            <Sparkles className="h-3.5 w-3.5 text-cyan-400" /> Auto-recorte
+            <Sparkles className="h-3.5 w-3.5 text-cyan-400" /> {t.scanner.autoCrop}
           </button>
 
           {cropMode && (
@@ -505,14 +506,14 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
                 onClick={applyManualCrop}
                 className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-xs font-semibold text-emerald-500 dark:text-emerald-300 ring-1 ring-emerald-500/30"
               >
-                <Check className="h-3.5 w-3.5" /> Aplicar
+                <Check className="h-3.5 w-3.5" /> {t.scanner.apply}
               </button>
               <button
                 type="button"
                 onClick={cancelManualCrop}
                 className="inline-flex items-center gap-1 rounded-lg bg-rose-500/15 px-2.5 py-1.5 text-xs font-medium text-rose-400"
               >
-                <X className="h-3.5 w-3.5" /> Cancelar
+                <X className="h-3.5 w-3.5" /> {t.scanner.cancel}
               </button>
             </>
           )}
@@ -528,7 +529,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
               updateCurrentPageThumb()
             }}
             className="icon-btn"
-            title="Rotar 90° izquierda"
+            title={t.scanner.rotateLeft}
           >
             <RotateCcw className="h-4 w-4" />
           </button>
@@ -542,7 +543,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
               updateCurrentPageThumb()
             }}
             className="icon-btn"
-            title="Rotar 90° derecha"
+            title={t.scanner.rotateRight}
           >
             <RotateCw className="h-4 w-4" />
           </button>
@@ -555,7 +556,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
               updateCurrentPageThumb()
             }}
             className="icon-btn"
-            title="Voltear horizontalmente"
+            title={t.scanner.flipHoriz}
           >
             <FlipHorizontal className="h-4 w-4" />
           </button>
@@ -570,7 +571,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
               setZoomText(editorRef.current?.zoomPercent() ?? '—')
             }}
             className="icon-btn"
-            title="Alejar"
+            title={t.scanner.zoomOut}
           >
             <ZoomOut className="h-4 w-4" />
           </button>
@@ -585,7 +586,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
               setZoomText(editorRef.current?.zoomPercent() ?? '—')
             }}
             className="icon-btn"
-            title="Acercar"
+            title={t.scanner.zoomIn}
           >
             <ZoomIn className="h-4 w-4" />
           </button>
@@ -597,7 +598,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
               setZoomText(editorRef.current?.zoomPercent() ?? '—')
             }}
             className="icon-btn"
-            title="Ajustar a ventana"
+            title={t.scanner.fitToWindow}
           >
             <Maximize2 className="h-4 w-4" />
           </button>
@@ -609,7 +610,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
               onClick={() => void handleResetEdits()}
               className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:opacity-35"
             >
-              ↩ Restablecer
+              ↩ {t.scanner.reset}
             </button>
           </div>
         </div>
@@ -619,7 +620,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
           <div className="flex shrink-0 items-center justify-between border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-xs text-amber-500 dark:text-amber-300">
             <span className="flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5" />
-              Se detectó margen en blanco alrededor del documento. ¿Aplicar auto-recorte inteligente?
+              {t.scanner.autoCropPrompt}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -627,7 +628,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
                 onClick={() => triggerAutoCrop(autoCropRect)}
                 className="rounded-md bg-amber-500/20 px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-500/30"
               >
-                Aplicar
+                {t.scanner.apply}
               </button>
               <button
                 type="button"
@@ -663,10 +664,10 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
                 <ScanLine className="h-8 w-8" />
               </div>
               <h3 className="text-base font-semibold text-[var(--text-primary)]">
-                Escaner Albedo · Digitalización WIA
+                {t.scanner.scannerTitle}
               </h3>
               <p className="max-w-xs text-xs leading-relaxed text-[var(--text-muted)]">
-                Pulsa el botón <strong className="text-[var(--text-secondary)]">Escanear</strong> para adquirir páginas desde tu escáner USB o WiFi y editarlas en tiempo real.
+                {t.scanner.scannerHeroDesc}
               </p>
             </div>
           )}
@@ -690,42 +691,42 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
       <aside className="panel flex w-[255px] shrink-0 flex-col gap-4 overflow-y-auto p-4">
         {/* Ajustes de captura */}
         <div className="space-y-2.5 border-b border-[var(--border-subtle)] pb-4">
-          <p className="section-label !mb-1">Parámetros de Escaneo</p>
+          <p className="section-label !mb-1">{t.scanner.scanParams}</p>
 
           <div>
             <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
-              Resolución (DPI)
+              {t.scanner.dpi}
             </label>
             <select
               value={dpi}
               onChange={(e) => setDpi(Number(e.target.value))}
               className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
             >
-              <option value={75}>75 dpi — Rápido</option>
-              <option value={150}>150 dpi — Normal</option>
-              <option value={300}>300 dpi — Alta calidad</option>
-              <option value={600}>600 dpi — Máxima calidad</option>
+              <option value={75}>{t.scanner.res75}</option>
+              <option value={150}>{t.scanner.res150}</option>
+              <option value={300}>{t.scanner.res300}</option>
+              <option value={600}>{t.scanner.res600}</option>
             </select>
           </div>
 
           <div>
             <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
-              Modo de color
+              {t.scanner.colorMode}
             </label>
             <select
               value={colorMode}
               onChange={(e) => setColorMode(Number(e.target.value))}
               className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
             >
-              <option value={2}>Color (24-bit)</option>
-              <option value={1}>Escala de grises (8-bit)</option>
-              <option value={0}>Blanco y Negro (1-bit)</option>
+              <option value={2}>{t.scanner.color24}</option>
+              <option value={1}>{t.scanner.gray8}</option>
+              <option value={0}>{t.scanner.bw1}</option>
             </select>
           </div>
 
           <div>
             <div className="flex justify-between text-[11px] text-[var(--text-secondary)]">
-              <span>Brillo escáner</span>
+              <span>{t.scanner.scanBrightness}</span>
               <span className="font-mono text-cyan-400">{scanBrightness}</span>
             </div>
             <input
@@ -741,7 +742,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
 
           <div>
             <div className="flex justify-between text-[11px] text-[var(--text-secondary)]">
-              <span>Contraste escáner</span>
+              <span>{t.scanner.scanContrast}</span>
               <span className="font-mono text-cyan-400">{scanContrast}</span>
             </div>
             <input
@@ -758,11 +759,11 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
 
         {/* Ajustes visuales post-escaneo */}
         <div className="space-y-2.5 border-b border-[var(--border-subtle)] pb-4">
-          <p className="section-label !mb-1">Ajuste Visual (Post-Captura)</p>
+          <p className="section-label !mb-1">{t.scanner.visualAdjust}</p>
 
           <div>
             <div className="flex justify-between text-[11px] text-[var(--text-secondary)]">
-              <span>Brillo imagen</span>
+              <span>{t.scanner.imgBrightness}</span>
               <span className="font-mono text-cyan-400">{imgBrightness}</span>
             </div>
             <input
@@ -781,7 +782,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
 
           <div>
             <div className="flex justify-between text-[11px] text-[var(--text-secondary)]">
-              <span>Contraste imagen</span>
+              <span>{t.scanner.imgContrast}</span>
               <span className="font-mono text-cyan-400">{imgContrast}</span>
             </div>
             <input
@@ -801,55 +802,55 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
 
         {/* Exportar */}
         <div className="space-y-2.5">
-          <p className="section-label !mb-1">Exportar</p>
+          <p className="section-label !mb-1">{t.scanner.export}</p>
 
           <div>
             <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
-              Formato de salida
+              {t.scanner.outputFormat}
             </label>
             <select
               value={format}
               onChange={(e) => setFormat(e.target.value as 'pdf' | 'jpg' | 'png')}
               className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
             >
-              <option value="pdf">PDF (una o varias páginas)</option>
-              <option value="jpg">JPG (por página)</option>
-              <option value="png">PNG (por página)</option>
+              <option value="pdf">{t.scanner.formatPdfMulti}</option>
+              <option value="jpg">{t.scanner.formatJpgPage}</option>
+              <option value="png">{t.scanner.formatPngPage}</option>
             </select>
           </div>
 
           {format === 'pdf' && (
             <div>
               <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
-                Tamaño de hoja
+                {t.scanner.pageSize}
               </label>
               <select
                 value={pageSize}
                 onChange={(e) => setPageSize(e.target.value as 'letter' | 'a4')}
                 className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
               >
-                <option value="letter">Carta (Letter)</option>
-                <option value="a4">A4 Estándar</option>
+                <option value="letter">{t.scanner.pageSizeLetter}</option>
+                <option value="a4">{t.scanner.pageSizeA4}</option>
               </select>
             </div>
           )}
 
           <div>
             <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
-              Nombre base del archivo
+              {t.scanner.baseFileName}
             </label>
             <input
               type="text"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
-              placeholder="Ej. Contrato"
+              placeholder={t.scanner.baseFileNamePlaceholder}
               className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
             />
           </div>
 
           <div>
             <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
-              Carpeta de destino
+              {t.scanner.destFolder}
             </label>
             <button
               type="button"
@@ -858,7 +859,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
             >
               <FolderOpen className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
               <span className="truncate" title={destFolder}>
-                {destFolder || 'Carpeta Documentos'}
+                {destFolder || t.scanner.defaultDocumentsFolder}
               </span>
             </button>
           </div>
@@ -869,7 +870,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
             onClick={() => void exportPages()}
             className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500/20 px-4 py-2.5 text-xs font-semibold text-emerald-500 dark:text-emerald-300 ring-1 ring-emerald-500/30 transition hover:bg-emerald-500/30 disabled:pointer-events-none disabled:opacity-40"
           >
-            <Save className="h-4 w-4" /> Guardar Documento
+            <Save className="h-4 w-4" /> {t.scanner.saveDoc}
           </button>
 
           <button
@@ -878,7 +879,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
             onClick={() => void api.openPath(destFolder)}
             className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-card-hover)] hover:text-[var(--text-primary)] disabled:opacity-40"
           >
-            <FolderOpen className="h-3.5 w-3.5" /> Abrir carpeta
+            <FolderOpen className="h-3.5 w-3.5" /> {t.scanner.openFolder}
           </button>
 
           <button
@@ -887,7 +888,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
             onClick={() => void handleDiscardAllEdits()}
             className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-400 transition hover:bg-rose-500/20 disabled:opacity-40"
           >
-            ↩ Limpiar ediciones
+            ↩ {t.scanner.discardEdits}
           </button>
         </div>
       </aside>

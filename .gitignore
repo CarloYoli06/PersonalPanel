@@ -3,6 +3,12 @@ node_modules/
 **/node_modules/
 .pnpm-store/
 
+# Compilados de Rust / Cargo / Tauri
+target/
+**/target/
+src-tauri/target/
+**/src-tauri/target/
+
 # Compilados y bundles de Electron-Vite
 out/
 dist/

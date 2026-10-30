@@ -1,4 +1,19 @@
-import type { PdfModuleAPI, PdfStudioSettings } from '../../shared/types'
+import { invoke } from '@tauri-apps/api/core'
+import type {
+  CompressPdfRequest,
+  ImageInputItem,
+  ImagesToPdfRequest,
+  MergePdfRequest,
+  MetadataSecurityRequest,
+  OrganizePdfRequest,
+  PdfDocumentInfo,
+  PdfModuleAPI,
+  PdfOperationOutput,
+  PdfStudioSettings,
+  SaveExportedImagesRequest,
+  SplitPdfRequest,
+  StampPdfRequest
+} from '../../shared/types'
 
 declare global {
   interface PanelWindowBridge {
@@ -6,6 +21,7 @@ declare global {
   }
   interface Window {
     panelApi?: PanelWindowBridge
+    __TAURI_INTERNALS__?: unknown
   }
 }
 
@@ -39,8 +55,70 @@ export function savePdfStudioSettings(settings: PdfStudioSettings): void {
   }
 }
 
+export const isTauriPdf =
+  typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__)
+
 export const isElectronPdf =
   typeof window !== 'undefined' && Boolean(window.panelApi?.pdf)
+
+export const tauriPdfApi: PdfModuleAPI = {
+  getPathForFile(file: File): string {
+    return (file as File & { path?: string }).path ?? file.name
+  },
+  async selectPdfFiles(multiple = true): Promise<string[]> {
+    return invoke<string[]>('pdf_select_pdf_files', { multiple })
+  },
+  async selectImageFiles(): Promise<string[]> {
+    return invoke<string[]>('pdf_select_image_files')
+  },
+  async selectOutputFolder(defaultPath?: string): Promise<string | null> {
+    return invoke<string | null>('pdf_select_output_folder', { defaultPath })
+  },
+  async inspectPdfs(filePaths: string[]): Promise<PdfDocumentInfo[]> {
+    return invoke<PdfDocumentInfo[]>('pdf_inspect_pdfs', { filePaths })
+  },
+  async inspectImages(filePaths: string[]): Promise<ImageInputItem[]> {
+    return invoke<ImageInputItem[]>('pdf_inspect_images', { filePaths })
+  },
+  async readPdfBytes(filePath: string): Promise<Uint8Array | null> {
+    const raw = await invoke<number[] | Uint8Array | null>('pdf_read_pdf_bytes', { filePath })
+    if (!raw) return null
+    return raw instanceof Uint8Array ? raw : new Uint8Array(raw)
+  },
+  async readImageDataUrl(filePath: string, maxPreviewPx = 320): Promise<string | null> {
+    return invoke<string | null>('pdf_read_image_data_url', { filePath, maxPreviewPx })
+  },
+  async mergePdfs(req: MergePdfRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_merge', { req })
+  },
+  async splitPdf(req: SplitPdfRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_split', { req })
+  },
+  async organizePdf(req: OrganizePdfRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_organize', { req })
+  },
+  async compressPdf(req: CompressPdfRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_compress', { req })
+  },
+  async imagesToPdf(req: ImagesToPdfRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_images_to_pdf', { req })
+  },
+  async saveExportedImages(req: SaveExportedImagesRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_save_exported_images', { req })
+  },
+  async stampPdf(req: StampPdfRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_stamp', { req })
+  },
+  async updateMetadataAndSecurity(req: MetadataSecurityRequest): Promise<PdfOperationOutput> {
+    return invoke<PdfOperationOutput>('pdf_update_metadata_security', { req })
+  },
+  async revealInFolder(targetPath: string): Promise<void> {
+    await invoke<void>('pdf_reveal_in_folder', { targetPath })
+  },
+  async openFile(targetPath: string): Promise<void> {
+    await invoke<void>('pdf_open_file', { targetPath })
+  }
+}
 
 export const browserMockPdfApi: PdfModuleAPI = {
   getPathForFile(file: File) {
@@ -146,9 +224,11 @@ export const browserMockPdfApi: PdfModuleAPI = {
 }
 
 export function getPdfApi(): PdfModuleAPI {
-  if (typeof window !== 'undefined' && window.panelApi?.pdf) {
+  if (isTauriPdf) {
+    return tauriPdfApi
+  }
+  if (isElectronPdf && window.panelApi?.pdf) {
     return window.panelApi.pdf
   }
   return browserMockPdfApi
 }
-

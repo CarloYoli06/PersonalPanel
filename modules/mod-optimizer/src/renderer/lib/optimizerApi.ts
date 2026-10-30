@@ -1,7 +1,11 @@
+import { invoke } from '@tauri-apps/api/core'
 import type {
+  CleanableCategory,
   OptimizerActionResult,
   OptimizerModuleAPI,
   PrivacyTweaksOptions,
+  StartupApp,
+  SystemMetrics,
   VisualTweaksOptions
 } from '../../shared/types'
 
@@ -11,11 +15,57 @@ declare global {
   }
   interface Window {
     panelApi?: PanelWindowBridge
+    __TAURI_INTERNALS__?: unknown
   }
 }
 
+export const isTauriOptimizer =
+  typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__)
+
 export const isElectronOptimizer =
-  typeof window !== 'undefined' && Boolean(window.panelApi?.optimizer)
+  typeof window !== 'undefined' &&
+  (Boolean(window.__TAURI_INTERNALS__) || Boolean(window.panelApi?.optimizer))
+
+const tauriOptimizerApi: OptimizerModuleAPI = {
+  async getMetrics(): Promise<SystemMetrics> {
+    return invoke<SystemMetrics>('optimizer_get_metrics')
+  },
+  async getStartupApps(): Promise<StartupApp[]> {
+    return invoke<StartupApp[]>('optimizer_get_startup_apps')
+  },
+  async toggleStartupApp(
+    appId: string,
+    location: 'HKCU' | 'HKLM' | 'StartupFolder',
+    enable: boolean
+  ): Promise<OptimizerActionResult> {
+    return invoke<OptimizerActionResult>('optimizer_toggle_startup_app', {
+      appId,
+      location,
+      enable
+    })
+  },
+  async scanCleanableItems(): Promise<CleanableCategory[]> {
+    return invoke<CleanableCategory[]>('optimizer_scan_cleanable_items')
+  },
+  async executeCleaning(categoryIds: string[]): Promise<OptimizerActionResult> {
+    return invoke<OptimizerActionResult>('optimizer_execute_cleaning', { categoryIds })
+  },
+  async getTelemetryStatus(): Promise<PrivacyTweaksOptions> {
+    return invoke<PrivacyTweaksOptions>('optimizer_get_telemetry_status')
+  },
+  async applyPrivacyTweaks(options: PrivacyTweaksOptions): Promise<OptimizerActionResult> {
+    return invoke<OptimizerActionResult>('optimizer_apply_privacy_tweaks', { options })
+  },
+  async getVisualStatus(): Promise<VisualTweaksOptions> {
+    return invoke<VisualTweaksOptions>('optimizer_get_visual_status')
+  },
+  async applyVisualTweaks(options: VisualTweaksOptions): Promise<OptimizerActionResult> {
+    return invoke<OptimizerActionResult>('optimizer_apply_visual_tweaks', { options })
+  },
+  async trimMemory(): Promise<OptimizerActionResult> {
+    return invoke<OptimizerActionResult>('optimizer_trim_memory')
+  }
+}
 
 export const browserMockOptimizerApi: OptimizerModuleAPI = {
   async getMetrics() {
@@ -107,7 +157,7 @@ export const browserMockOptimizerApi: OptimizerModuleAPI = {
       disableCortana: true
     }
   },
-  async applyPrivacyTweaks(options: PrivacyTweaksOptions): Promise<OptimizerActionResult> {
+  async applyPrivacyTweaks(_options: PrivacyTweaksOptions): Promise<OptimizerActionResult> {
     await new Promise((r) => setTimeout(r, 600))
     return { success: true, message: 'Ajustes de privacidad y telemetría aplicados' }
   },
@@ -118,7 +168,7 @@ export const browserMockOptimizerApi: OptimizerModuleAPI = {
       disableTaskbarAnimations: true
     }
   },
-  async applyVisualTweaks(options: VisualTweaksOptions): Promise<OptimizerActionResult> {
+  async applyVisualTweaks(_options: VisualTweaksOptions): Promise<OptimizerActionResult> {
     await new Promise((r) => setTimeout(r, 500))
     return { success: true, message: 'Ajustes de rendimiento visual guardados' }
   },
@@ -129,9 +179,11 @@ export const browserMockOptimizerApi: OptimizerModuleAPI = {
 }
 
 export function getOptimizerApi(): OptimizerModuleAPI {
+  if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+    return tauriOptimizerApi
+  }
   if (typeof window !== 'undefined' && window.panelApi?.optimizer) {
     return window.panelApi.optimizer
   }
   return browserMockOptimizerApi
 }
-
