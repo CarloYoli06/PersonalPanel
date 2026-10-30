@@ -2,7 +2,7 @@
   "name": "panel-personal-monorepo",
   "productName": "Panel Personal Hub",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Ecosistema de escritorio modular en Tauri v2 + Rust Cargo Workspaces",
   "author": "Albedo, miguellopezramirez",
   "workspaces": [
@@ -23,6 +23,7 @@
     "@ffmpeg-installer/ffmpeg": "1.1.0",
     "@ffprobe-installer/ffprobe": "2.1.2",
     "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-notification": "^2.8.0",
     "pdfjs-dist": "^6.4.299"
   },
   "devDependencies": {
