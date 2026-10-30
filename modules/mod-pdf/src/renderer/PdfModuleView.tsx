@@ -33,6 +33,7 @@ import type {
 import {
   DEFAULT_PDF_SETTINGS,
   getPdfApi,
+  isTauriPdf,
   isElectronPdf,
   loadPdfStudioSettings,
   savePdfStudioSettings
@@ -728,7 +729,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
         </div>
 
         <div className="flex items-center gap-2">
-          {!isElectronPdf && (
+          {!isTauriPdf && !isElectronPdf && (
             <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-400">
               {t.pdf.simulationMode}
             </span>

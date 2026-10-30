@@ -21,7 +21,7 @@ import type {
   StartupApp,
   SystemMetrics
 } from '../shared/types'
-import { getOptimizerApi, isElectronOptimizer } from './lib/optimizerApi'
+import { getOptimizerApi, isTauriOptimizer, isElectronOptimizer } from './lib/optimizerApi'
 
 type TabType = 'clean' | 'privacy' | 'performance' | 'startup'
 
@@ -233,7 +233,7 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
         </div>
 
         <div className="flex items-center gap-3">
-          {!isElectronOptimizer && (
+          {!isTauriOptimizer && !isElectronOptimizer && (
             <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-500">
               {t.optimizer.simulationMode}
             </span>

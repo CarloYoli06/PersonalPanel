@@ -10,7 +10,7 @@ import type {
   SystemInfo
 } from '../shared/types'
 import { createId, isVideoFile } from './lib/format'
-import { getVideoApi, isElectronVideo } from './lib/videoApi'
+import { getVideoApi, isTauriVideo, isElectronVideo } from './lib/videoApi'
 import { DropZone } from './components/DropZone'
 import { QueueList } from './components/QueueList'
 import { SettingsPanel } from './components/SettingsPanel'
@@ -346,7 +346,7 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
         </div>
 
         <div className="flex items-center gap-2">
-          {!isElectronVideo && (
+          {!isTauriVideo && !isElectronVideo && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-500 ring-1 ring-amber-500/30">
               <AlertTriangle className="h-3 w-3" /> {t.video.webSimulation}
             </span>
