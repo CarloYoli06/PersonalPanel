@@ -17,6 +17,8 @@
     "core:webview:default",
     "core:event:default",
     "dialog:default",
+    "notification:default",
+    "core:window:allow-set-progress-bar",
     "shell:default"
   ]
 }

@@ -46,10 +46,28 @@ impl Default for BrandingConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NotificationSettings {
+    pub enabled: bool,
+    pub only_when_unfocused: bool,
+}
+
+impl Default for NotificationSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            only_when_unfocused: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HubAppSettings {
     pub close_to_tray: bool,
     pub branding: BrandingConfig,
+    #[serde(default)]
+    pub notifications: NotificationSettings,
 }
 
 impl Default for HubAppSettings {
@@ -57,6 +75,40 @@ impl Default for HubAppSettings {
         Self {
             close_to_tray: true,
             branding: BrandingConfig::default(),
+            notifications: NotificationSettings::default(),
+        }
+    }
+}
+
+/// Textos del menú de bandeja, enviados por el frontend según el idioma activo.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrayLabels {
+    pub header: String,
+    pub dashboard: String,
+    pub video: String,
+    pub scanner: String,
+    pub optimizer: String,
+    pub pdf: String,
+    pub settings: String,
+    pub keep_background: String,
+    pub quit: String,
+    pub tooltip: String,
+}
+
+impl Default for TrayLabels {
+    fn default() -> Self {
+        Self {
+            header: "Panel Personal · Hub Modular".to_string(),
+            dashboard: "Abrir Panel Principal".to_string(),
+            video: "FileDiet · Control de Videos".to_string(),
+            scanner: "Escaner Albedo · Digitalización".to_string(),
+            optimizer: "PC Optimizer · Rendimiento & Privacidad".to_string(),
+            pdf: "PDF Studio · Control de PDF".to_string(),
+            settings: "Configuración y Personalización".to_string(),
+            keep_background: "Mantener activo en segundo plano al cerrar".to_string(),
+            quit: "Salir completamente".to_string(),
+            tooltip: "Panel Personal · Ecosistema Modular".to_string(),
         }
     }
 }
@@ -242,35 +294,29 @@ fn apply_branding_icons(app: &AppHandle, branding: &BrandingConfig) {
     }
 }
 
-fn setup_system_tray(app: &AppHandle, close_to_tray: bool) -> tauri::Result<()> {
-    let header = MenuItemBuilder::with_id("header", "Panel Personal · Hub Modular")
+fn build_tray_menu(
+    app: &AppHandle,
+    labels: &TrayLabels,
+    close_to_tray: bool,
+) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let header = MenuItemBuilder::with_id("header", &labels.header)
         .enabled(false)
         .build(app)?;
-    let nav_dashboard =
-        MenuItemBuilder::with_id("nav_dashboard", "Abrir Panel Principal").build(app)?;
-    let nav_video =
-        MenuItemBuilder::with_id("nav_video", "FileDiet · Control de Videos").build(app)?;
-    let nav_scanner =
-        MenuItemBuilder::with_id("nav_scanner", "Escaner Albedo · Digitalización").build(app)?;
-    let nav_optimizer = MenuItemBuilder::with_id(
-        "nav_optimizer",
-        "PC Optimizer · Rendimiento & Privacidad",
-    )
-    .build(app)?;
-    let nav_pdf = MenuItemBuilder::with_id("nav_pdf", "PDF Studio · Control de PDF").build(app)?;
-    let nav_settings =
-        MenuItemBuilder::with_id("nav_settings", "Configuración y Personalización").build(app)?;
+    let nav_dashboard = MenuItemBuilder::with_id("nav_dashboard", &labels.dashboard).build(app)?;
+    let nav_video = MenuItemBuilder::with_id("nav_video", &labels.video).build(app)?;
+    let nav_scanner = MenuItemBuilder::with_id("nav_scanner", &labels.scanner).build(app)?;
+    let nav_optimizer = MenuItemBuilder::with_id("nav_optimizer", &labels.optimizer).build(app)?;
+    let nav_pdf = MenuItemBuilder::with_id("nav_pdf", &labels.pdf).build(app)?;
+    let nav_settings = MenuItemBuilder::with_id("nav_settings", &labels.settings).build(app)?;
 
-    let toggle_tray = CheckMenuItemBuilder::with_id(
-        "toggle_close_to_tray",
-        "Mantener activo en segundo plano al cerrar",
-    )
-    .checked(close_to_tray)
-    .build(app)?;
+    let toggle_tray =
+        CheckMenuItemBuilder::with_id("toggle_close_to_tray", &labels.keep_background)
+            .checked(close_to_tray)
+            .build(app)?;
 
-    let quit_item = MenuItemBuilder::with_id("quit", "Salir completamente").build(app)?;
+    let quit_item = MenuItemBuilder::with_id("quit", &labels.quit).build(app)?;
 
-    let menu = MenuBuilder::new(app)
+    MenuBuilder::new(app)
         .item(&header)
         .separator()
         .item(&nav_dashboard)
@@ -283,10 +329,15 @@ fn setup_system_tray(app: &AppHandle, close_to_tray: bool) -> tauri::Result<()> 
         .item(&toggle_tray)
         .separator()
         .item(&quit_item)
-        .build()?;
+        .build()
+}
+
+fn setup_system_tray(app: &AppHandle, close_to_tray: bool) -> tauri::Result<()> {
+    let labels = TrayLabels::default();
+    let menu = build_tray_menu(app, &labels, close_to_tray)?;
 
     let mut tray_builder = TrayIconBuilder::with_id("main-tray")
-        .tooltip("Panel Personal · Ecosistema Modular")
+        .tooltip(&labels.tooltip)
         .menu(&menu)
         .on_menu_event(move |app_handle, event| match event.id().as_ref() {
             "nav_dashboard" => show_and_navigate(app_handle, Some("dashboard")),
@@ -409,6 +460,28 @@ fn hub_app_set_close_to_tray(
 }
 
 #[tauri::command]
+fn hub_app_set_notifications(
+    state: State<'_, HubState>,
+    notifications: NotificationSettings,
+) -> HubAppSettings {
+    let mut settings = state.settings.lock().unwrap();
+    settings.notifications = notifications;
+    state.save_settings(&settings);
+    settings.clone()
+}
+
+#[tauri::command]
+fn hub_tray_set_labels(app: AppHandle, state: State<'_, HubState>, labels: TrayLabels) {
+    let close_to_tray = state.settings.lock().unwrap().close_to_tray;
+    if let Some(tray) = app.tray_by_id("main-tray") {
+        if let Ok(menu) = build_tray_menu(&app, &labels, close_to_tray) {
+            let _ = tray.set_menu(Some(menu));
+        }
+        let _ = tray.set_tooltip(Some(labels.tooltip.as_str()));
+    }
+}
+
+#[tauri::command]
 fn hub_modules_get_states(
     state: State<'_, HubState>,
 ) -> HashMap<String, ModuleStateSnapshot> {
@@ -521,6 +594,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let config_dir = app
                 .path()
@@ -562,6 +636,8 @@ pub fn run() {
             hub_app_get_settings,
             hub_app_set_branding,
             hub_app_set_close_to_tray,
+            hub_app_set_notifications,
+            hub_tray_set_labels,
             hub_modules_get_states,
             hub_modules_set_enabled,
             hub_modules_check_deps,

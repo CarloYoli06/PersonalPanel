@@ -22,7 +22,8 @@
         "fullscreen": false,
         "decorations": false,
         "shadow": true,
-        "center": true
+        "center": true,
+        "backgroundThrottling": "disabled"
       }
     ],
     "security": {
