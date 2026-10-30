@@ -19,7 +19,8 @@ import type {
   DependencyStatus,
   HubAppSettings,
   ModuleManifest,
-  ModuleStateSnapshot
+  ModuleStateSnapshot,
+  NotificationSettings
 } from '@panel/core-sdk'
 import {
   StatusBadge,
@@ -38,6 +39,7 @@ interface SettingsViewProps {
   appSettings: HubAppSettings
   onUpdateBranding: (branding: BrandingConfig) => Promise<void>
   onUpdateCloseToTray: (closeToTray: boolean) => Promise<void>
+  onUpdateNotifications: (notifications: NotificationSettings) => Promise<void>
   onToggleModule: (moduleId: string, enabled: boolean) => void
   onCheckDependencies: (moduleId: string) => Promise<DependencyStatus[]>
   onStopProcesses: (moduleId: string) => Promise<void>
@@ -49,6 +51,7 @@ export function SettingsView({
   appSettings,
   onUpdateBranding,
   onUpdateCloseToTray,
+  onUpdateNotifications,
   onToggleModule,
   onCheckDependencies,
   onStopProcesses
@@ -279,6 +282,43 @@ export function SettingsView({
                   onChange={(next) => void onUpdateCloseToTray(next)}
                 />
               </div>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3.5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-primary)]">
+                    {t.activity.notifSection}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                    {t.activity.notifSectionDesc}
+                  </p>
+                </div>
+                <Switch
+                  checked={appSettings.notifications.enabled}
+                  accent="cyan"
+                  onChange={(next) =>
+                    void onUpdateNotifications({ ...appSettings.notifications, enabled: next })
+                  }
+                />
+              </div>
+              {appSettings.notifications.enabled && (
+                <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-2">
+                  <p className="text-[11px] text-[var(--text-secondary)]">
+                    {t.activity.notifOnlyUnfocused}
+                  </p>
+                  <Switch
+                    checked={appSettings.notifications.onlyWhenUnfocused}
+                    accent="cyan"
+                    onChange={(next) =>
+                      void onUpdateNotifications({
+                        ...appSettings.notifications,
+                        onlyWhenUnfocused: next
+                      })
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <p className="mt-3 text-[11px] text-[var(--text-muted)]">

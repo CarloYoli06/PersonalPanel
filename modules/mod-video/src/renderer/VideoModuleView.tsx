@@ -56,8 +56,10 @@ function jobFromProbe(result: ProbeResult): Job {
   }
 }
 
-export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+export default function VideoModuleView({ isActive, activity }: ModuleViewProps): JSX.Element {
   const { t } = useI18n()
+  const isActiveRef = useRef(isActive)
+  isActiveRef.current = isActive
   const api = useMemo(() => getVideoApi(), [])
 
   const [jobs, setJobsState] = useState<Job[]>([])
@@ -123,9 +125,9 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
     () =>
       api.onProgress(({ jobId, percent, fps, etaSeconds }) => {
         patchJob(jobId, { progress: percent, fps, etaSeconds })
-        onStatusChange?.(true, `Comprimiendo (${percent.toFixed(0)}%)…`)
+        activity.progress(percent)
       }),
-    [api, patchJob, onStatusChange]
+    [api, patchJob, activity]
   )
 
   const addPaths = useCallback(
@@ -170,7 +172,7 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
           if (!isMounted) return
           getCurrentWebview()
             .onDragDropEvent((event) => {
-              if (!isMounted) return
+              if (!isMounted || !isActiveRef.current) return
               if (event.payload.type === 'enter' || event.payload.type === 'over') {
                 setIsDragging(true)
               } else if (event.payload.type === 'leave') {
@@ -248,8 +250,10 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
 
     cancelRequested.current = false
     setRunning(true)
-    onStatusChange?.(true, 'Comprimiendo cola de videos…')
+    activity.start('Comprimiendo cola de videos…')
     let completed = 0
+    let failed = 0
+    let errorMessage: string | undefined
 
     try {
       while (!cancelRequested.current) {
@@ -282,13 +286,16 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
         } else if (result.cancelled) {
           patchJob(next.id, { status: 'cancelled', etaSeconds: null, fps: null })
         } else {
+          failed += 1
+          errorMessage = result.error
           patchJob(next.id, { status: 'error', error: result.error, etaSeconds: null, fps: null })
         }
       }
     } finally {
       setRunning(false)
       setStopping(false)
-      onStatusChange?.(false, 'Listo')
+      if (failed > 0) activity.fail(errorMessage)
+      else activity.succeed()
     }
 
     if (cancelRequested.current) {
@@ -296,7 +303,7 @@ export default function VideoModuleView({ onStatusChange }: ModuleViewProps): JS
     } else if (completed > 0) {
       notify(`${completed} video(s) comprimido(s) correctamente.`)
     }
-  }, [running, settings, pickFolder, notify, patchJob, api, onStatusChange])
+  }, [running, settings, pickFolder, notify, patchJob, api, activity])
 
   const cancelCurrent = useCallback(async () => {
     cancelRequested.current = true

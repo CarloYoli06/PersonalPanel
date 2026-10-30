@@ -118,11 +118,11 @@ function ImagePreviewThumb({ filePath }: { filePath: string }): JSX.Element {
   )
 }
 
-export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+export default function PdfModuleView({ isActive, activity }: ModuleViewProps): JSX.Element {
   const { t } = useI18n()
   const api = useMemo(() => getPdfApi(), [])
-  const onStatusChangeRef = useRef(onStatusChange)
-  onStatusChangeRef.current = onStatusChange
+  const isActiveRef = useRef(isActive)
+  isActiveRef.current = isActive
 
   const [activeTab, setActiveTab] = useState<PdfTabId>('merge')
   const [busy, setBusy] = useState(false)
@@ -376,21 +376,25 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
   ): Promise<void> => {
     setBusy(true)
     setProgressText(taskLabel)
-    onStatusChangeRef.current?.(true, taskLabel)
+    activity.start(taskLabel)
     try {
       const res = await fn()
       if (res.canceled) {
         notify('Operación cancelada', 'info')
+        activity.succeed()
         return
       }
       setLastResult(res)
       notify(res.message, res.success ? 'success' : 'error')
+      if (res.success) activity.succeed(res.message)
+      else activity.fail(res.message)
     } catch (err) {
-      notify(err instanceof Error ? err.message : 'Error durante la operación', 'error')
+      const msg = err instanceof Error ? err.message : 'Error durante la operación'
+      notify(msg, 'error')
+      activity.fail(msg)
     } finally {
       setBusy(false)
       setProgressText('')
-      onStatusChangeRef.current?.(false, 'Listo (0 MB en reposo)')
     }
   }
 
@@ -647,7 +651,7 @@ export default function PdfModuleView({ onStatusChange }: ModuleViewProps): JSX.
           if (!isMounted) return
           getCurrentWebview()
             .onDragDropEvent((event) => {
-              if (!isMounted) return
+              if (!isMounted || !isActiveRef.current) return
               if (event.payload.type === 'enter' || event.payload.type === 'over') {
                 setIsDraggingFiles(true)
               } else if (event.payload.type === 'leave') {

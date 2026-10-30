@@ -1,12 +1,15 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getCurrentWindow, ProgressBarStatus } from '@tauri-apps/api/window'
 import {
   HUB_IPC,
   type BrandingConfig,
   type DependencyStatus,
   type HubAPI,
   type HubAppSettings,
-  type ModuleStateSnapshot
+  type ModuleStateSnapshot,
+  type NotificationSettings,
+  type TrayLabels
 } from '@panel/core-sdk'
 
 declare global {
@@ -24,6 +27,7 @@ export const isTauriRuntime = (): boolean =>
 
 let mockAppSettings: HubAppSettings = {
   closeToTray: true,
+  notifications: { enabled: true, onlyWhenUnfocused: true },
   branding: {
     mode: 'logo',
     initials: 'PA',
@@ -123,6 +127,31 @@ const tauriHubApi: HubAPI = {
   async setCloseToTray(closeToTray: boolean): Promise<HubAppSettings> {
     return invoke<HubAppSettings>('hub_app_set_close_to_tray', { closeToTray })
   },
+  async setNotifications(notifications: NotificationSettings): Promise<HubAppSettings> {
+    return invoke<HubAppSettings>('hub_app_set_notifications', { notifications })
+  },
+  setTrayLabels(labels: TrayLabels): void {
+    void invoke('hub_tray_set_labels', { labels })
+  },
+  async isWindowFocused(): Promise<boolean> {
+    const win = getCurrentWindow()
+    const [focused, visible, minimized] = await Promise.all([
+      win.isFocused(),
+      win.isVisible(),
+      win.isMinimized()
+    ])
+    return focused && visible && !minimized
+  },
+  setTaskbarProgress(progress: number | null): void {
+    const status =
+      progress === null ? ProgressBarStatus.None : progress < 0 ? ProgressBarStatus.Indeterminate : ProgressBarStatus.Normal
+    void getCurrentWindow()
+      .setProgressBar({
+        status,
+        ...(progress !== null && progress >= 0 ? { progress: Math.round(progress) } : {})
+      })
+      .catch(() => {})
+  },
   onTrayNavigate(callback: (route: string) => void): () => void {
     let unlisten: UnlistenFn | null = null
     let active = true
@@ -186,6 +215,13 @@ const browserMockHubApi: HubAPI = {
     mockAppSettings = { ...mockAppSettings, closeToTray }
     return mockAppSettings
   },
+  async setNotifications(notifications: NotificationSettings): Promise<HubAppSettings> {
+    mockAppSettings = { ...mockAppSettings, notifications }
+    return mockAppSettings
+  },
+  setTrayLabels: () => {},
+  isWindowFocused: async () => document.hasFocus(),
+  setTaskbarProgress: () => {},
   onTrayNavigate() {
     return () => {}
   },

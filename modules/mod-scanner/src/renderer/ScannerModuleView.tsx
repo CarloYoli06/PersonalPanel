@@ -23,7 +23,7 @@ import type { ScannedPage } from '../shared/types'
 import { ImageEditor, type CropRect } from './lib/imageEditor'
 import { getScannerApi } from './lib/scannerApi'
 
-export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+export default function ScannerModuleView({ activity }: ModuleViewProps): JSX.Element {
   const { t } = useI18n()
   const api = useMemo(() => getScannerApi(), [])
 
@@ -145,10 +145,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
   const doScan = async (forceSelect = false): Promise<void> => {
     const needsDialog = !savedDevice.id || forceSelect
     setScanning(true)
-    onStatusChange?.(
-      true,
-      needsDialog ? 'Seleccionando escáner WIA…' : 'Escaneando documento…'
-    )
+    activity.start(needsDialog ? 'Seleccionando escáner WIA…' : 'Escaneando documento…')
 
     if (needsDialog) {
       setScanOverlayMsg({
@@ -176,6 +173,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
 
       if (result.cancelled) {
         notify('Escaneo cancelado', 'info')
+        activity.succeed()
         return
       }
       if (!result.success || !result.base64 || !result.tempPath) {
@@ -199,12 +197,14 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
       setCurrentPage(nextIndex)
       await loadPageIntoEditor(newPage)
       notify('Escaneo completado', 'success')
+      activity.succeed()
     } catch (e) {
-      notify('Error al escanear: ' + (e instanceof Error ? e.message : String(e)), 'error')
+      const msg = e instanceof Error ? e.message : String(e)
+      notify('Error al escanear: ' + msg, 'error')
+      activity.fail(msg)
     } finally {
       setScanOverlayMsg(null)
       setScanning(false)
-      onStatusChange?.(false, 'Listo')
     }
   }
 
@@ -317,7 +317,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const baseName = fileName.trim() || 'Albedo'
 
-    onStatusChange?.(true, 'Exportando documento…')
+    activity.start('Exportando documento…')
     try {
       if (format === 'pdf') {
         const docsPath = await api.getDocsPath()
@@ -336,6 +336,7 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
         const res = await api.savePDF({ imagePaths: tempPaths, destPath, pageSize })
         if (!res.success) throw new Error(res.error)
         notify(`PDF guardado: ${baseName}_${ts}.pdf`, 'success')
+        activity.succeed(`${baseName}_${ts}.pdf`)
       } else {
         for (let i = 0; i < pages.length; i++) {
           const base64 = pages[i].editedBase64 || pages[i].base64
@@ -344,12 +345,13 @@ export default function ScannerModuleView({ onStatusChange }: ModuleViewProps): 
           if (!res.success) throw new Error(res.error)
         }
         notify(`${pages.length} imagen(es) guardada(s)`, 'success')
+        activity.succeed()
       }
       setDestFolder(folder)
     } catch (e) {
-      notify('Error al exportar: ' + (e instanceof Error ? e.message : String(e)), 'error')
-    } finally {
-      onStatusChange?.(false, 'Listo')
+      const msg = e instanceof Error ? e.message : String(e)
+      notify('Error al exportar: ' + msg, 'error')
+      activity.fail(msg)
     }
   }
 

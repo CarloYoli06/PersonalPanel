@@ -1,44 +1,43 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Clapperboard,
-  Copy,
-  FileText,
-  LayoutGrid,
-  Loader2,
-  Minus,
-  ScanLine,
-  Settings,
-  Sparkles,
-  Square,
-  Wrench,
-  X
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Copy, LayoutGrid, Minus, Settings, Square, X } from 'lucide-react'
 import type {
   BrandingConfig,
   DependencyStatus,
   HubAppSettings,
-  ModuleManifest,
-  ModuleStateSnapshot
+  ModuleStateSnapshot,
+  NotificationSettings
 } from '@panel/core-sdk'
-import { GlobalToast, I18nProvider, ThemeProvider, ThemeToggle, useI18n } from '@panel/ui-kit'
+import {
+  GlobalToast,
+  I18nProvider,
+  ThemeProvider,
+  ThemeToggle,
+  formatMessage,
+  useI18n
+} from '@panel/ui-kit'
 import { MODULE_REGISTRY, getModuleById } from './registry'
 import { getHubApi } from './lib/hubApi'
 import { buildBrandingPayload } from './lib/iconGenerator'
 import { DashboardView } from './views/Dashboard'
 import { SettingsView } from './views/Settings'
+import { ModuleHost } from './components/ModuleHost'
+import { ModuleTab } from './components/ModuleTab'
+import { ActivityToast, type ActivityToastData } from './components/ActivityToast'
+import { ensureNotificationPermission, sendNativeNotification } from './lib/notifications'
+import {
+  markSeen,
+  resetActivity,
+  subscribeTransitions,
+  useActivities
+} from './state/activityStore'
 
 type ActiveRoute = 'dashboard' | 'settings' | string
 
-function NavIcon({ icon }: { icon: ModuleManifest['icon'] }): JSX.Element {
-  if (icon === 'video') return <Clapperboard className="h-4 w-4" />
-  if (icon === 'scan') return <ScanLine className="h-4 w-4" />
-  if (icon === 'wrench') return <Wrench className="h-4 w-4" />
-  if (icon === 'file-text') return <FileText className="h-4 w-4" />
-  return <Sparkles className="h-4 w-4" />
-}
+const DEFAULT_NOTIFICATIONS: NotificationSettings = { enabled: true, onlyWhenUnfocused: true }
 
 const DEFAULT_SETTINGS: HubAppSettings = {
   closeToTray: true,
+  notifications: DEFAULT_NOTIFICATIONS,
   branding: {
     mode: 'logo',
     initials: 'PA',
@@ -94,6 +93,7 @@ function HubShell(): JSX.Element {
       const normalizedMode = cfg.branding?.mode === 'initials' ? 'initials' : 'logo'
       const resolved: HubAppSettings = {
         ...cfg,
+        notifications: cfg.notifications ?? DEFAULT_NOTIFICATIONS,
         branding: {
           ...cfg.branding,
           mode: normalizedMode
@@ -124,24 +124,34 @@ function HubShell(): JSX.Element {
     }
   }, [hubApi])
 
-  // Invocar hooks de ciclo de vida (`onStart` y `onStop`) del manifiesto al entrar/salir de un módulo
+  // Módulos visitados permanecen montados (keep-alive) para conservar su sesión
+  const [mountedIds, setMountedIds] = useState<string[]>([])
+  const activities = useActivities()
+
+  const unmountModule = useCallback((moduleId: string) => {
+    setMountedIds((prev) => {
+      if (!prev.includes(moduleId)) return prev
+      void getModuleById(moduleId)?.onStop?.()
+      return prev.filter((id) => id !== moduleId)
+    })
+    resetActivity(moduleId)
+  }, [])
+
   useEffect(() => {
-    const prevId = prevModuleRef.current
-    const currentManifest =
-      route !== 'dashboard' && route !== 'settings' ? getModuleById(route) : undefined
-
-    if (prevId && prevId !== currentManifest?.id) {
-      const prevManifest = getModuleById(prevId)
-      void prevManifest?.onStop?.()
-    }
-
-    if (currentManifest && currentManifest.id !== prevId) {
-      void currentManifest.onStart?.()
-      prevModuleRef.current = currentManifest.id
-    } else if (!currentManifest) {
-      prevModuleRef.current = null
-    }
+    const manifest = route !== 'dashboard' && route !== 'settings' ? getModuleById(route) : undefined
+    if (!manifest) return
+    markSeen(manifest.id)
+    setMountedIds((prev) => {
+      if (prev.includes(manifest.id)) return prev
+      void manifest.onStart?.()
+      return [...prev, manifest.id]
+    })
   }, [route])
+
+  // Terminar mientras se está en la pestaña también cuenta como "visto"
+  useEffect(() => {
+    if (route !== 'dashboard' && route !== 'settings' && activities[route]?.unseen) markSeen(route)
+  }, [route, activities])
 
   const handleUpdateBranding = useCallback(
     async (branding: BrandingConfig) => {
@@ -169,13 +179,25 @@ function HubShell(): JSX.Element {
     [hubApi, notify]
   )
 
+  const handleUpdateNotifications = useCallback(
+    async (notifications: NotificationSettings) => {
+      if (notifications.enabled && !appSettings.notifications.enabled) {
+        await ensureNotificationPermission()
+      }
+      const next = await hubApi.setNotifications(notifications)
+      setAppSettings(next)
+    },
+    [hubApi, appSettings.notifications.enabled]
+  )
+
   const handleToggleModule = useCallback(
     async (moduleId: string, enabled: boolean) => {
       const snap = await hubApi.setModuleEnabled(moduleId, enabled)
       setModuleStates((prev) => ({ ...prev, [moduleId]: snap }))
       const mod = getModuleById(moduleId)
-      if (!enabled && route === moduleId) {
-        setRoute('dashboard')
+      if (!enabled) {
+        unmountModule(moduleId)
+        if (route === moduleId) setRoute('dashboard')
       }
       notify(
         `${mod?.name ?? moduleId}: ${
@@ -183,7 +205,7 @@ function HubShell(): JSX.Element {
         }`
       )
     },
-    [hubApi, route, notify]
+    [hubApi, route, notify, unmountModule]
   )
 
   const handleCheckDeps = useCallback(
@@ -198,31 +220,10 @@ function HubShell(): JSX.Element {
   const handleStopProcesses = useCallback(
     async (moduleId: string): Promise<void> => {
       await hubApi.stopModuleProcesses(moduleId)
+      unmountModule(moduleId)
       notify('Subprocesos del módulo detenidos')
     },
-    [hubApi, notify]
-  )
-
-  const handleModuleInlineStatus = useCallback(
-    (moduleId: string, running: boolean, statusText?: string) => {
-      setModuleStates((prev) => {
-        const current = prev[moduleId]
-        if (!current) return prev
-        const nextStatusText = statusText ?? (running ? 'Procesando…' : 'Listo (0 MB en reposo)')
-        if (current.running === running && current.statusText === nextStatusText) {
-          return prev
-        }
-        return {
-          ...prev,
-          [moduleId]: {
-            ...current,
-            running,
-            statusText: nextStatusText
-          }
-        }
-      })
-    },
-    []
+    [hubApi, notify, unmountModule]
   )
 
   const handleNavigateHome = useCallback(() => setRoute('dashboard'), [])
@@ -267,19 +268,85 @@ function HubShell(): JSX.Element {
     [orderedModules, moduleStates]
   )
 
-  const activeModule = useMemo(
-    () => (route !== 'dashboard' && route !== 'settings' ? getModuleById(route) : undefined),
-    [route]
-  )
+  // ── Notificaciones al terminar una tarea ─────────────────────────────
+  const routeRef = useRef(route)
+  routeRef.current = route
+  const notifRef = useRef({ settings: appSettings.notifications, t })
+  notifRef.current = { settings: appSettings.notifications, t }
+  const [activityToast, setActivityToast] = useState<ActivityToastData | null>(null)
+  const activityToastTimer = useRef<number>()
 
-  const handleActiveModuleStatusChange = useCallback(
-    (running: boolean, text?: string) => {
-      if (activeModule) {
-        handleModuleInlineStatus(activeModule.id, running, text)
+  useEffect(() => {
+    const unsub = subscribeTransitions(async (tr) => {
+      const { settings, t: tt } = notifRef.current
+      if (!settings.enabled) return
+      const focused = (await hubApi.isWindowFocused?.()) ?? true
+      const viewing = routeRef.current === tr.moduleId
+      // Módulo en pantalla y ventana en primer plano: el propio módulo ya da feedback
+      if (focused && viewing) return
+
+      const name = tt.modules[tr.moduleId as keyof typeof tt.modules]?.shortName ?? tr.moduleId
+      const ok = tr.status === 'success'
+      let body = formatMessage(ok ? tt.activity.doneBody : tt.activity.failedBody, { name })
+      if (!ok && tr.message) body = `${body} ${tr.message}`
+
+      if (!focused) {
+        void sendNativeNotification(name, body)
+      } else if (!settings.onlyWhenUnfocused || !viewing) {
+        window.clearTimeout(activityToastTimer.current)
+        setActivityToast({ moduleId: tr.moduleId, status: tr.status, title: name, body })
+        activityToastTimer.current = window.setTimeout(() => setActivityToast(null), 6000)
       }
-    },
-    [activeModule, handleModuleInlineStatus]
-  )
+    })
+    return () => {
+      unsub()
+      window.clearTimeout(activityToastTimer.current)
+    }
+  }, [hubApi])
+
+  // Progreso agregado en la barra de tareas de Windows
+  useEffect(() => {
+    const running = Object.values(activities).filter((a) => a.status === 'running')
+    if (running.length === 0) {
+      hubApi.setTaskbarProgress?.(null)
+      return
+    }
+    const determinate = running.filter((a) => typeof a.progress === 'number')
+    hubApi.setTaskbarProgress?.(
+      determinate.length === 0
+        ? -1
+        : determinate.reduce((sum, a) => sum + (a.progress as number), 0) / determinate.length
+    )
+  }, [activities, hubApi])
+
+  // Menú de la bandeja traducido al idioma activo
+  useEffect(() => {
+    hubApi.setTrayLabels({
+      header: t.tray.header,
+      dashboard: t.tray.dashboard,
+      video: t.modules['mod-video'].name,
+      scanner: t.modules['mod-scanner'].name,
+      optimizer: t.modules['mod-optimizer'].name,
+      pdf: t.modules['mod-pdf'].name,
+      settings: t.tray.settings,
+      keepBackground: t.tray.keepBackground,
+      quit: t.tray.quit,
+      tooltip: t.tray.tooltip
+    })
+  }, [hubApi, t])
+
+  // running/statusText provienen del registro de actividad (única fuente de verdad)
+  const effectiveStates = useMemo(() => {
+    const merged: Record<string, ModuleStateSnapshot> = {}
+    for (const [id, snap] of Object.entries(moduleStates)) {
+      const act = activities[id]
+      const running = act?.status === 'running'
+      merged[id] = running
+        ? { ...snap, running: true, statusText: act?.label ?? t.activity.running, progress: act?.progress ?? null }
+        : { ...snap, running: false }
+    }
+    return merged
+  }, [moduleStates, activities, t])
 
   return (
     <div className="hub-bg flex h-full flex-col overflow-hidden text-[var(--text-primary)]">
@@ -332,51 +399,15 @@ function HubShell(): JSX.Element {
               {t.nav.home}
             </button>
 
-            {enabledModules.map((mod) => {
-              const isSelected = route === mod.id
-              const isRunning = Boolean(moduleStates[mod.id]?.running)
-              const activeRing =
-                mod.accent === 'cyan'
-                  ? 'bg-cyan-500/15 text-[var(--text-primary)] ring-1 ring-cyan-500/35'
-                  : mod.accent === 'emerald'
-                    ? 'bg-emerald-500/15 text-[var(--text-primary)] ring-1 ring-emerald-500/35'
-                    : mod.accent === 'rose'
-                      ? 'bg-rose-500/15 text-[var(--text-primary)] ring-1 ring-rose-500/35'
-                      : 'bg-violet-500/15 text-[var(--text-primary)] ring-1 ring-violet-500/35'
-
-              const iconColor =
-                mod.accent === 'cyan'
-                  ? 'text-cyan-400'
-                  : mod.accent === 'emerald'
-                    ? 'text-emerald-400'
-                    : mod.accent === 'rose'
-                      ? 'text-rose-400'
-                      : 'text-violet-400'
-
-              return (
-                <button
-                  key={mod.id}
-                  type="button"
-                  onClick={() => setRoute(mod.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                    isSelected
-                      ? activeRing
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  <span className={iconColor}>
-                    <NavIcon icon={mod.icon} />
-                  </span>
-                  <span>
-                    {t.modules[mod.id as keyof typeof t.modules]?.shortName ||
-                      mod.name.split('·')[0].trim()}
-                  </span>
-                  {isRunning && (
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                  )}
-                </button>
-              )
-            })}
+            {enabledModules.map((mod) => (
+              <ModuleTab
+                key={mod.id}
+                module={mod}
+                selected={route === mod.id}
+                activity={activities[mod.id]}
+                onSelect={() => setRoute(mod.id)}
+              />
+            ))}
           </nav>
         </div>
 
@@ -439,7 +470,7 @@ function HubShell(): JSX.Element {
         {route === 'dashboard' && (
           <DashboardView
             modules={orderedModules}
-            moduleStates={moduleStates}
+            moduleStates={effectiveStates}
             onOpenModule={(id) => setRoute(id)}
             onToggleModule={(id, enabled) => void handleToggleModule(id, enabled)}
             onOpenSettings={() => setRoute('settings')}
@@ -450,38 +481,39 @@ function HubShell(): JSX.Element {
         {route === 'settings' && (
           <SettingsView
             modules={orderedModules}
-            moduleStates={moduleStates}
+            moduleStates={effectiveStates}
             appSettings={appSettings}
             onUpdateBranding={handleUpdateBranding}
             onUpdateCloseToTray={handleUpdateCloseToTray}
+            onUpdateNotifications={handleUpdateNotifications}
             onToggleModule={(id, enabled) => void handleToggleModule(id, enabled)}
             onCheckDependencies={handleCheckDeps}
             onStopProcesses={handleStopProcesses}
           />
         )}
 
-        {activeModule && (
-          <Suspense
-            fallback={
-              <div className="panel flex h-full flex-col items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  Cargando módulo {activeModule.name} en memoria…
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  Inicializando interfaz bajo demanda (Lazy Loading)
-                </p>
-              </div>
-            }
-          >
-            <activeModule.entryPoint
+        {mountedIds.map((id) => {
+          const manifest = getModuleById(id)
+          if (!manifest) return null
+          return (
+            <ModuleHost
+              key={id}
+              manifest={manifest}
+              isActive={route === id}
               onNavigateHome={handleNavigateHome}
-              onStatusChange={handleActiveModuleStatusChange}
             />
-          </Suspense>
-        )}
+          )
+        })}
       </div>
 
+      <ActivityToast
+        toast={activityToast}
+        viewLabel={t.activity.view}
+        onView={(id) => {
+          setActivityToast(null)
+          setRoute(id)
+        }}
+      />
       <GlobalToast message={toast} type="info" />
     </div>
   )

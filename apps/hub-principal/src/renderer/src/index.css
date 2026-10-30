@@ -20,6 +20,11 @@ html.theme-dark {
   --switch-off: #3f3f46;
   --glow-primary: rgba(139, 92, 246, 0.12);
   --glow-secondary: rgba(0, 180, 216, 0.08);
+  --status-running: #34d399;
+  --status-success: #4ade80;
+  --status-error: #fb7185;
+  --status-success-soft: rgba(74, 222, 128, 0.18);
+  --status-error-soft: rgba(251, 113, 133, 0.18);
 }
 
 html.theme-light {
@@ -35,6 +40,11 @@ html.theme-light {
   --switch-off: #cbd5e1;
   --glow-primary: rgba(139, 92, 246, 0.08);
   --glow-secondary: rgba(0, 180, 216, 0.07);
+  --status-running: #059669;
+  --status-success: #16a34a;
+  --status-error: #e11d48;
+  --status-success-soft: rgba(22, 163, 74, 0.14);
+  --status-error-soft: rgba(225, 29, 72, 0.14);
 }
 
 html,
@@ -105,3 +115,42 @@ body {
   }
 }
 
+
+/* Animaciones de estado de pestañas (trabajando / terminó / error) */
+@keyframes tab-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+@keyframes tab-icon-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.88); }
+}
+@keyframes tab-badge-pop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes tab-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-2px); }
+  40%, 80% { transform: translateX(2px); }
+}
+@keyframes tab-glow {
+  0% { box-shadow: 0 0 0 0 var(--status-success-soft); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+
+.tab-icon-running { animation: tab-icon-pulse 1.4s ease-in-out infinite; }
+.tab-bar-indeterminate { width: 40%; animation: tab-shimmer 1.3s ease-in-out infinite; }
+.tab-badge-pop { animation: tab-badge-pop 0.35s ease-out both; }
+.tab-error-shake { animation: tab-shake 0.4s ease-in-out 1; }
+.tab-success-glow { animation: tab-glow 1.2s ease-out 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-icon-running,
+  .tab-bar-indeterminate,
+  .tab-badge-pop,
+  .tab-error-shake,
+  .tab-success-glow { animation: none; }
+  .tab-bar-indeterminate { width: 100%; opacity: 0.6; }
+}

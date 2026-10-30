@@ -33,11 +33,11 @@ function formatBytes(bytes: number): string {
   return `${mb.toFixed(0)} MB`
 }
 
-export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps): JSX.Element {
+export default function OptimizerModuleView({ isActive, activity }: ModuleViewProps): JSX.Element {
   const { t } = useI18n()
   const api = useMemo(() => getOptimizerApi(), [])
-  const onStatusChangeRef = useRef(onStatusChange)
-  onStatusChangeRef.current = onStatusChange
+  const isActiveRef = useRef(isActive)
+  isActiveRef.current = isActive
 
   const [activeTab, setActiveTab] = useState<TabType>('clean')
   const [loading, setLoading] = useState(false)
@@ -82,7 +82,6 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
     if (scanningRef.current) return
     scanningRef.current = true
     setLoading(true)
-    onStatusChangeRef.current?.(true, 'Escaneando archivos residuales...')
     try {
       const items = await api.scanCleanableItems()
       setCleanItems(items)
@@ -92,7 +91,6 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
     } finally {
       scanningRef.current = false
       setLoading(false)
-      onStatusChangeRef.current?.(false, 'Listo')
     }
   }, [api, notify])
 
@@ -131,7 +129,9 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
     refreshVisual()
     refreshStartup()
 
-    const timer = setInterval(refreshMetrics, 5000)
+    const timer = setInterval(() => {
+      if (isActiveRef.current) refreshMetrics()
+    }, 5000)
     return () => clearInterval(timer)
   }, [refreshMetrics, refreshCleaningScan, refreshPrivacy, refreshVisual, refreshStartup])
 
@@ -141,45 +141,55 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
       return
     }
     setLoading(true)
-    onStatusChangeRef.current?.(true, 'Limpiando archivos del sistema...')
+    activity.start(t.optimizer.tabs.clean)
     try {
       const res = await api.executeCleaning(selectedCleanIds)
       if (res.success) {
-        notify(`Limpieza completada: ${formatBytes(res.freedBytes ?? 0)} liberados`, 'success')
+        const done = `Limpieza completada: ${formatBytes(res.freedBytes ?? 0)} liberados`
+        notify(done, 'success')
+        activity.succeed(done)
         await refreshCleaningScan()
         await refreshMetrics()
       } else {
         notify(res.error ?? 'Error en la limpieza', 'error')
+        activity.fail(res.error)
       }
+    } catch (err) {
+      activity.fail(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
-      onStatusChangeRef.current?.(false, 'Listo')
     }
   }
 
   const handleApplyPrivacy = async (opts: PrivacyTweaksOptions): Promise<void> => {
     setPrivacy(opts)
     setLoading(true)
-    onStatusChangeRef.current?.(true, 'Aplicando ajustes de privacidad...')
+    activity.start(t.optimizer.tabs.privacy)
     try {
       const res = await api.applyPrivacyTweaks(opts)
       notify(res.message, res.success ? 'success' : 'error')
+      if (res.success) activity.succeed(res.message)
+      else activity.fail(res.message)
+    } catch (err) {
+      activity.fail(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
-      onStatusChangeRef.current?.(false, 'Listo')
     }
   }
 
   const handleApplyVisual = async (opts: VisualTweaksOptions): Promise<void> => {
     setVisual(opts)
     setLoading(true)
-    onStatusChangeRef.current?.(true, 'Ajustando rendimiento visual...')
+    activity.start(t.optimizer.tabs.performance)
     try {
       const res = await api.applyVisualTweaks(opts)
       notify(res.message, res.success ? 'success' : 'error')
+      if (res.success) activity.succeed(res.message)
+      else activity.fail(res.message)
+    } catch (err) {
+      activity.fail(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
-      onStatusChangeRef.current?.(false, 'Listo')
     }
   }
 
@@ -199,14 +209,16 @@ export default function OptimizerModuleView({ onStatusChange }: ModuleViewProps)
 
   const handleTrimMemory = async (): Promise<void> => {
     setLoading(true)
-    onStatusChangeRef.current?.(true, 'Optimizando memoria RAM...')
+    activity.start(t.optimizer.trimRam)
     try {
       const res = await api.trimMemory()
       notify(res.message, 'success')
+      activity.succeed(res.message)
       await refreshMetrics()
+    } catch (err) {
+      activity.fail(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
-      onStatusChangeRef.current?.(false, 'Listo')
     }
   }
 
