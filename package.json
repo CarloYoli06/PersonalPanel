@@ -4,7 +4,7 @@
   "private": true,
   "version": "2.0.0",
   "description": "Ecosistema de escritorio modular en Tauri v2 + Rust Cargo Workspaces",
-  "author": "Albedo",
+  "author": "Albedo, miguellopezramirez",
   "workspaces": [
     "apps/*",
     "packages/*",
