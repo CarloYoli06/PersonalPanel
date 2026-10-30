@@ -33,9 +33,28 @@ export interface BrandingConfig {
   dataUrl?: string
 }
 
+export interface NotificationSettings {
+  enabled: boolean
+  onlyWhenUnfocused: boolean
+}
+
+export interface TrayLabels {
+  header: string
+  dashboard: string
+  video: string
+  scanner: string
+  optimizer: string
+  pdf: string
+  settings: string
+  keepBackground: string
+  quit: string
+  tooltip: string
+}
+
 export interface HubAppSettings {
   closeToTray: boolean
   branding: BrandingConfig
+  notifications: NotificationSettings
 }
 
 export interface HubPreferences {
@@ -68,7 +87,14 @@ export interface HubAPI {
   getAppSettings(): Promise<HubAppSettings>
   setBranding(branding: BrandingConfig): Promise<HubAppSettings>
   setCloseToTray(closeToTray: boolean): Promise<HubAppSettings>
+  setNotifications(notifications: NotificationSettings): Promise<HubAppSettings>
+  setTrayLabels(labels: TrayLabels): void
   onTrayNavigate(callback: (route: string) => void): () => void
+
+  // Ventana: foco/visibilidad y progreso en la barra de tareas
+  isWindowFocused?(): Promise<boolean>
+  /** 0-100 para progreso determinado, -1 para indeterminado, null para quitarlo */
+  setTaskbarProgress?(progress: number | null): void
 
   // Gestión de módulos
   getModuleStates(): Promise<Record<string, ModuleStateSnapshot>>

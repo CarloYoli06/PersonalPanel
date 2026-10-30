@@ -142,6 +142,33 @@ export interface Translations {
     traySectionDesc: string
     trayTip: string
   }
+  activity: {
+    running: string
+    done: string
+    failed: string
+    progress: string
+    tasksRunning: string
+    closeSession: string
+    retry: string
+    moduleCrashed: string
+    loading: string
+    lazyHint: string
+    view: string
+    doneBody: string
+    failedBody: string
+    notifSection: string
+    notifSectionDesc: string
+    notifEnabled: string
+    notifOnlyUnfocused: string
+  }
+  tray: {
+    header: string
+    dashboard: string
+    settings: string
+    keepBackground: string
+    quit: string
+    tooltip: string
+  }
   video: {
     title: string
     subtitle: string
@@ -467,4 +494,11 @@ export interface Translations {
     rescan: string
     refreshList: string
   }
+}
+
+export type TranslateParams = Record<string, string | number>
+
+export function formatMessage(template: string, params?: TranslateParams): string {
+  if (!params) return template
+  return template.replace(/\{(\w+)\}/g, (m, k: string) => (k in params ? String(params[k]) : m))
 }

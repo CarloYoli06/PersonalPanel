@@ -1,4 +1,5 @@
 import type { ComponentType, LazyExoticComponent } from 'react'
+import type { ActivityReporter } from './activity'
 
 export type ModuleCategory = 'media' | 'documents' | 'utilities' | 'system'
 
@@ -55,11 +56,11 @@ export interface ModuleManifest {
    */
   entryPoint: LazyExoticComponent<ComponentType<ModuleViewProps>>
   /**
-   * Hook invocado cuando el usuario abre o activa el módulo.
+   * Hook invocado cuando el módulo se monta (primera visita). Sigue montado al cambiar de pestaña.
    */
   onStart?: () => void | Promise<void>
   /**
-   * Hook invocado cuando el usuario sale del módulo o lo desactiva.
+   * Hook invocado cuando el módulo se desmonta (desactivado, sesión cerrada o procesos detenidos).
    */
   onStop?: () => void | Promise<void>
 }
@@ -67,7 +68,8 @@ export interface ModuleManifest {
 export interface ModuleViewProps {
   /** Permite al módulo navegar de vuelta al Hub */
   onNavigateHome?: () => void
-  /** Permite al módulo reportar su actividad al Hub */
-  onStatusChange?: (running: boolean, statusText?: string) => void
+  /** true cuando la pestaña del módulo está visible (los módulos visitados siguen montados en segundo plano) */
+  isActive: boolean
+  /** Canal para reportar trabajo en curso / terminado / error al Hub */
+  activity: ActivityReporter
 }
-
